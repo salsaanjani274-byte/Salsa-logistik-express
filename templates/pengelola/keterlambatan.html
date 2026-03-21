@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Laporan Keterlambatan – LogisTik{% endblock %}
+{% block topbar_title %}Laporan Keterlambatan Paket{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/pengelola" class="nav-item"><i class="fas fa-chart-pie"></i> Dashboard</a>
+<a href="/pengelola/laporan" class="nav-item"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keterlambatan" class="nav-item active"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
+<div class="nav-section">Manajemen</div>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Laporan Keterlambatan Pengiriman</h2>
+  <p>Paket yang belum terkirim dan sudah melewati estimasi pengiriman</p>
+</div>
+
+{% if pakets_terlambat %}
+<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
+  <div style="width:42px;height:42px;background:rgba(239,68,68,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+    <i class="fas fa-exclamation-triangle" style="color:#EF4444;"></i>
+  </div>
+  <div>
+    <div style="font-weight:700;color:#991B1B;font-size:15px;">{{ pakets_terlambat|length }} paket terlambat ditemukan</div>
+    <div style="font-size:13px;color:#B91C1C;margin-top:2px;">Paket-paket ini memerlukan tindakan segera dari admin cabang terkait.</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-clock" style="color:var(--danger);margin-right:8px;"></i>Daftar Paket Terlambat</h5>
+    <span style="font-size:13px;color:#6B7280;">{{ pakets_terlambat|length }} paket</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No Resi</th>
+        <th>Pengirim</th>
+        <th>Tujuan</th>
+        <th>Layanan</th>
+        <th>Status</th>
+        <th>Estimasi</th>
+        <th>Sudah Berjalan</th>
+        <th>Keterlambatan</th>
+        <th>Cabang Asal</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pakets_terlambat %}
+      <tr>
+        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td>{{ p.pengirim }}</td>
+        <td>{{ p.kota_tujuan }}</td>
+        <td><span class="badge badge-info">{{ p.layanan_kode }}</span></td>
+        <td>
+          {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
+          <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="font-weight:600;">{{ p.estimasi_hari }} hari</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="font-weight:600;color:#D97706;">{{ p.hari_berjalan }} hari</span>
+        </td>
+        <td style="text-align:center;">
+          <span class="badge badge-danger" style="font-size:12px;padding:5px 10px;">
+            <i class="fas fa-exclamation-circle"></i>
+            +{{ p.selisih_hari }} hari
+          </span>
+        </td>
+        <td style="font-size:12px;">{{ p.cabang_asal }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" style="text-align:center;padding:60px;color:#6B7280;">
+          <i class="fas fa-check-circle" style="font-size:48px;color:var(--success);opacity:.4;display:block;margin-bottom:14px;"></i>
+          <div style="font-weight:600;font-size:16px;color:#374151;margin-bottom:6px;">Tidak ada keterlambatan</div>
+          <div style="font-size:13px;">Semua paket dalam batas estimasi pengiriman</div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Laporan Paket – LogisTik{% endblock %}
+{% block topbar_title %}Laporan & Statistik{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/pengelola" class="nav-item"><i class="fas fa-chart-pie"></i> Dashboard</a>
+<a href="/pengelola/laporan" class="nav-item active"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keterlambatan" class="nav-item"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
+<div class="nav-section">Manajemen</div>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>📊 Laporan Distribusi Paket</h2>
+  <p>Data seluruh paket yang terdaftar dalam sistem</p>
+</div>
+
+<!-- STATUS SUMMARY -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header"><h5>Rekap Status Paket</h5></div>
+  <div class="card-body">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      {% for sc in status_count %}
+      {% set s = STATUS_LABEL.get(sc.status, (sc.status, 'secondary')) %}
+      <div style="background:var(--bg);border-radius:12px;padding:14px 20px;text-align:center;min-width:130px;border:1px solid var(--border);">
+        <div style="font-size:22px;font-weight:800;font-family:'Space Grotesk',sans-serif;">{{ sc.total }}</div>
+        <span class="badge badge-{{ s[1] }}" style="margin-top:6px;">{{ s[0] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- TABLE SEMUA PAKET -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-table" style="color:var(--primary);margin-right:8px;"></i>Semua Data Paket</h5>
+    <span style="font-size:13px;color:#6B7280;">{{ pakets|length }} paket total</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No</th><th>No Resi</th><th>Pengirim</th><th>Layanan</th>
+        <th>Asal → Tujuan</th><th>Berat</th><th>Biaya</th><th>Cabang Asal</th><th>Status</th><th>Tanggal</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pakets %}
+      <tr>
+        <td style="color:#9CA3AF;font-size:12px;">{{ loop.index }}</td>
+        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td style="font-size:13px;">{{ p.pengirim }}</td>
+        <td><span class="badge badge-{{ 'primary' if p.layanan=='YES' else 'info' }}">{{ p.layanan }}</span></td>
+        <td style="font-size:13px;">{{ p.kota_asal }} → {{ p.kota_tujuan }}</td>
+        <td style="font-size:13px;">{{ p.berat_bayar }} kg</td>
+        <td style="font-size:13px;"><strong>Rp{{ "{:,.0f}".format(p.total_biaya|float) }}</strong></td>
+        <td style="font-size:12px;">{{ p.cabang_asal }}</td>
+        <td>
+          {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
+          <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" style="text-align:center;padding:40px;color:#6B7280;">Belum ada data paket</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

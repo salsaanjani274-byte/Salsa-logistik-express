@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Kurir – LogisTik{% endblock %}
+{% block topbar_title %}Dashboard Kurir{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Kurir</div>
+<a href="/kurir" class="nav-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>👋 Halo, {{ session.nama }}!</h2>
+  <p>Kelola pengantaran paket Anda hari ini</p>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fas fa-route"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ on_delivery }}</div>
+      <div class="stat-label">Sedang Diantar</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ delivered }}</div>
+      <div class="stat-label">Berhasil Dikirim</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-box"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ pakets|length }}</div>
+      <div class="stat-label">Total Paket</div>
+    </div>
+  </div>
+</div>
+
+<!-- DAFTAR PAKET KURIR -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-motorcycle" style="color:var(--primary);margin-right:8px;"></i>Paket yang Ditugaskan</h5>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No Resi</th><th>Penerima</th><th>Alamat</th>
+        <th>Layanan</th><th>Status</th><th>Aksi</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pakets %}
+      <tr>
+        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td>
+          <div style="font-weight:600;">{{ p.nama_penerima }}</div>
+          <div style="font-size:11px;color:#6B7280;">{{ p.no_hp_penerima }}</div>
+        </td>
+        <td style="max-width:200px;font-size:12.5px;">{{ p.alamat_penerima }}</td>
+        <td><span class="badge badge-info">{{ p.layanan_kode }}</span></td>
+        <td>
+          {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
+          <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+        </td>
+        <td>
+          {% if p.status == 'out_for_delivery' %}
+          <button class="btn btn-success btn-sm" onclick="openPOD('{{ p.id }}', '{{ p.no_resi }}', '{{ p.nama_penerima }}')">
+            <i class="fas fa-check"></i> POD
+          </button>
+          {% elif p.status == 'delivered' %}
+          <span style="color:var(--success);font-size:12px;font-weight:600;"><i class="fas fa-check-circle"></i> Selesai</span>
+          {% else %}
+          <span style="color:#9CA3AF;font-size:12px;">Menunggu</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:50px;color:#6B7280;">
+        <i class="fas fa-inbox" style="font-size:42px;opacity:.3;display:block;margin-bottom:12px;"></i>
+        Belum ada paket yang ditugaskan
+      </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PANDUAN ALUR -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-header"><h5><i class="fas fa-map-signs" style="color:var(--primary);margin-right:8px;"></i>Alur Status Pengiriman</h5></div>
+  <div class="card-body">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% for key, (label, color) in STATUS_LABEL.items() %}
+      <span class="badge badge-{{ color }}" style="padding:6px 12px;font-size:12px;">{{ label }}</span>
+      {% endfor %}
+    </div>
+    <div style="margin-top:16px;padding:14px;background:#F9FAFB;border-radius:10px;font-size:13px;color:#374151;">
+      <strong>📋 Petunjuk POD (Proof of Delivery):</strong><br>
+      Saat paket sudah diserahkan ke penerima, klik tombol <strong style="color:var(--success);">POD</strong> dan isi nama penerima. 
+      Status paket akan otomatis berubah menjadi <em>Terkirim</em> dan notifikasi dikirim ke pengirim.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POD -->
+<div class="modal-overlay" id="modalPOD">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-clipboard-check" style="color:var(--success);margin-right:8px;"></i>Konfirmasi Pengiriman (POD)</h4>
+      <button class="modal-close" onclick="closeModal('modalPOD')">✕</button>
+    </div>
+    <div style="background:#F0FDF4;border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:14px;margin-bottom:20px;">
+      <div style="font-size:12px;color:#065F46;">No Resi</div>
+      <div class="resi-code" style="font-size:15px;" id="podResiDisplay">-</div>
+      <div style="font-size:12px;color:#065F46;margin-top:8px;">Nama Penerima Terdaftar</div>
+      <div style="font-weight:600;" id="podNamaTerdaftar">-</div>
+    </div>
+    <form method="POST" id="formPOD" action="">
+      <div class="form-group">
+        <label class="form-label">Nama Penerima Aktual <span style="color:var(--danger);">*</span></label>
+        <input class="form-control" name="nama_penerima" required placeholder="Nama orang yang menerima paket">
+        <div style="font-size:11px;color:#6B7280;margin-top:5px;">Bisa berbeda jika diterima oleh keluarga/tetangga</div>
+      </div>
+      <button class="btn btn-success" type="submit" style="width:100%;padding:13px;font-size:15px;">
+        <i class="fas fa-check-double"></i> Konfirmasi Paket Terkirim
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openPOD(id, resi, nama) {
+  document.getElementById('podResiDisplay').textContent = resi;
+  document.getElementById('podNamaTerdaftar').textContent = nama;
+  document.getElementById('formPOD').action = '/kurir/pod/' + id;
+  openModal('modalPOD');
+}
+</script>
+{% endblock %}

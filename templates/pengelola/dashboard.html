@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Pengelola – LogisTik{% endblock %}
+{% block topbar_title %}Dashboard Pengelola{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/pengelola" class="nav-item active"><i class="fas fa-chart-pie"></i> Dashboard</a>
+<a href="/pengelola/laporan" class="nav-item"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keterlambatan" class="nav-item"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
+<div class="nav-section">Manajemen</div>
+<a href="#" class="nav-item" onclick="openModal('modalTambahUser')"><i class="fas fa-user-plus"></i> Tambah User</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<!-- STATS -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="fas fa-box"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ total_paket }}</div>
+      <div class="stat-label">Total Paket</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ delivered }}</div>
+      <div class="stat-label">Terkirim</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fas fa-spinner"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ on_process }}</div>
+      <div class="stat-label">Dalam Proses</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ total_pelanggan }}</div>
+      <div class="stat-label">Pelanggan</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="fas fa-motorcycle"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ total_kurir }}</div>
+      <div class="stat-label">Kurir Aktif</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ "Rp{:,.0f}".format(total_rev|float) }}</div>
+      <div class="stat-label">Total Revenue</div>
+    </div>
+  </div><div class="stat-card">
+  <div class="stat-icon" style="background:rgba(239,68,68,0.1);">
+    <i class="fas fa-exclamation-triangle" style="color:#EF4444;"></i>
+  </div>
+  <div class="stat-info">
+    <div class="stat-val" style="color:#EF4444;">{{ total_terlambat }}</div>
+    <div class="stat-label">Paket Terlambat</div>
+  </div>
+</div>
+</div>
+
+<!-- PAKET TERBARU -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header">
+    <h5><i class="fas fa-box-open" style="color:var(--primary);margin-right:8px;"></i>Paket Terbaru</h5>
+    <a href="/pengelola/laporan" class="btn btn-outline btn-sm">Lihat Semua</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No Resi</th><th>Pengirim</th><th>Tujuan</th>
+        <th>Layanan</th><th>Berat</th><th>Total</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pakets %}
+      <tr>
+        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td>{{ p.pengirim_nama }}</td>
+        <td>{{ p.kota_tujuan }}</td>
+        <td><span class="badge badge-info">{{ p.layanan_kode }}</span></td>
+        <td>{{ p.berat_bayar }} kg</td>
+        <td><strong>Rp{{ "{:,.0f}".format(p.total_biaya|float) }}</strong></td>
+        <td>
+          {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
+          <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;color:#6B7280;padding:30px;">Belum ada paket</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CABANG & USER -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div class="card">
+    <div class="card-header">
+      <h5><i class="fas fa-building" style="color:var(--primary);margin-right:8px;"></i>Daftar Cabang</h5>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalTambahUser')"><i class="fas fa-plus"></i> Tambah</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Kode</th><th>Nama</th><th>Kota</th><th>Tipe</th></tr></thead>
+        <tbody>
+        {% for c in cabangs %}
+        <tr>
+          <td><code style="font-size:12px;color:var(--primary);">{{ c.kode_cabang }}</code></td>
+          <td>{{ c.nama_cabang }}</td>
+          <td>{{ c.kota }}</td>
+          <td>
+            <span class="badge badge-{{ 'primary' if c.tipe=='pusat' else ('warning' if c.tipe=='gateway' else 'secondary') }}">
+              {{ c.tipe|capitalize }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h5><i class="fas fa-users" style="color:var(--primary);margin-right:8px;"></i>Daftar User</h5>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalTambahUser')"><i class="fas fa-plus"></i> Tambah</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nama</th><th>Role</th><th>Cabang</th><th>status</th><th  colspan="2">Aksi</th></tr></thead>
+        <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ u.nama }}</div>
+            <div style="font-size:11px;color:#6B7280;">{{ u.email }}</div>
+          </td>
+          <td>
+            <span class="badge badge-{{ 'primary' if u.role=='pengelola' else ('info' if u.role=='admin_cabang' else ('warning' if u.role=='kurir' else 'secondary')) }}">
+              {{ u.role.replace('_',' ')|title }}
+            </span>
+          </td>
+          <td style="font-size:12px;">{{ u.nama_cabang or '-' }}</td>
+          <td>{{u.status}}</td>
+          <td>
+            {% if u.id != session.user_id %}
+            <a href="/pengelola/users/hapus/{{ u.id }}" class="btn btn-danger btn-sm"
+               onclick="return confirm('Nonaktifkan user ini?')">
+              <i class="fas fa-ban"></i>
+            </a>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.id != session.user_id %}
+            <a href="/pengelola/users/aktif/{{ u.id }}" class="bbtn btn-success btn-sm"
+               onclick="return confirm('aktifkan user ini?')">
+              <i class="fas fa-ban"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!--TAMBAH USER -->
+<div class="modal-overlay" id="modalTambahUser">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-user-plus" style="color:var(--primary);margin-right:8px;"></i>Tambah User Baru</h4>
+      <button class="modal-close" onclick="closeModal('modalTambahUser')">✕</button>
+    </div>
+    <form method="POST" action="/pengelola/users/tambah">
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap</label>
+        <input class="form-control" name="nama" required placeholder="Nama lengkap">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-control" name="email" type="email" required placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. HP</label>
+          <input class="form-control" name="no_hp" placeholder="08xxxxxxxxxx">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" name="password" type="password" required placeholder="Min 8 karakter">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-control" name="role" required>
+            <option value="admin_cabang">Admin Cabang</option>
+            <option value="kurir">Kurir</option>
+            <option value="pelanggan">Pelanggan</option>
+            <option value="pengelola">Pengelola</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cabang</label>
+          <select class="form-control" name="cabang_id">
+            <option value="">-- Pilih Cabang --</option>
+            {% for c in cabangs %}
+            <option value="{{ c.id }}">{{ c.nama_cabang }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit" style="width:100%;">
+        <i class="fas fa-save"></i> Simpan User
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

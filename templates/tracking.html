@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lacak Paket – LogisTik Express</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F4F6FB; min-height: 100vh; }
+  .nav { background: #1A1A2E; padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-icon { width: 36px; height: 36px; background: #E84B13; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
+  .nav-title { color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 18px; }
+  .nav-links { display: flex; gap: 12px; }
+  .nav-links a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13.5px; padding: 7px 14px; border-radius: 8px; transition: all .2s; }
+  .nav-links a:hover { color: white; background: rgba(255,255,255,0.08); }
+  .hero { background: linear-gradient(135deg, #E84B13 0%, #C03D0E 100%); padding: 56px 28px; text-align: center; }
+  .hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 800; color: white; margin-bottom: 10px; }
+  .hero p { color: rgba(255,255,255,0.8); font-size: 15px; margin-bottom: 32px; }
+  .search-box { background: white; border-radius: 16px; padding: 8px; display: flex; gap: 8px; max-width: 560px; margin: 0 auto; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
+  .search-box input { flex: 1; border: none; padding: 12px 16px; font-size: 15px; font-family: 'Plus Jakarta Sans', sans-serif; color: #1A1A2E; outline: none; background: transparent; }
+  .search-box button { background: #E84B13; color: white; border: none; border-radius: 10px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .2s; }
+  .search-box button:hover { background: #C03D0E; }
+  .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+  .card { background: white; border-radius: 18px; border: 1px solid #E5E7EB; overflow: hidden; margin-bottom: 20px; }
+  .card-header { padding: 18px 24px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
+  .card-header h3 { font-weight: 800; font-size: 16px; }
+  .card-body { padding: 24px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-item label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #9CA3AF; margin-bottom: 5px; }
+  .info-item span { font-size: 14px; font-weight: 600; color: #1A1A2E; }
+  .resi-code { font-family: 'Space Grotesk', monospace; font-weight: 700; color: #E84B13; font-size: 16px; letter-spacing: 1px; }
+  .badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .badge-success { background: rgba(16,185,129,0.12); color: #065F46; }
+  .badge-warning { background: rgba(245,158,11,0.12); color: #D97706; }
+  .badge-primary { background: rgba(232,75,19,0.12); color: #E84B13; }
+  .badge-info { background: rgba(59,130,246,0.12); color: #1E40AF; }
+  .badge-danger { background: rgba(239,68,68,0.12); color: #991B1B; }
+  .badge-secondary { background: rgba(107,114,128,0.12); color: #374151; }
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #E5E7EB; }
+  .t-item { position: relative; padding-bottom: 24px; }
+  .t-item:last-child { padding-bottom: 0; }
+  .t-dot { position: absolute; left: -26px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #E84B13; border: 2.5px solid white; box-shadow: 0 0 0 2.5px #E84B13; }
+  .t-dot.done { background: #10B981; box-shadow: 0 0 0 2.5px #10B981; }
+  .t-time { font-size: 11.5px; color: #9CA3AF; margin-bottom: 3px; }
+  .t-status { font-weight: 700; font-size: 14px; color: #1A1A2E; }
+  .t-loc { font-size: 12.5px; color: #6B7280; margin-top: 3px; }
+  .t-desc { font-size: 12.5px; color: #9CA3AF; margin-top: 3px; }
+  .empty { text-align: center; padding: 60px 24px; color: #6B7280; }
+  .empty i { font-size: 52px; opacity: .2; display: block; margin-bottom: 16px; }
+  .not-found { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 14px; padding: 32px; text-align: center; }
+  .progress-bar { display: flex; gap: 0; margin: 20px 0; }
+  .prog-step { flex: 1; text-align: center; position: relative; }
+  .prog-step::before { content: ''; position: absolute; top: 16px; left: 50%; right: -50%; height: 3px; background: #E5E7EB; z-index: 0; }
+  .prog-step:last-child::before { display: none; }
+  .prog-circle { width: 34px; height: 34px; border-radius: 50%; background: #E5E7EB; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 14px; position: relative; z-index: 1; transition: all .3s; }
+  .prog-circle.active { background: #E84B13; color: white; }
+  .prog-circle.done { background: #10B981; color: white; }
+  .prog-label { font-size: 10px; font-weight: 600; color: #9CA3AF; }
+  .prog-label.active, .prog-label.done { color: #374151; }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <div class="nav-icon"><i class="fas fa-truck-fast"></i></div>
+    <span class="nav-title">LogisTik Express</span>
+  </a>
+  <div class="nav-links">
+    {% if session.user_id %}
+    <a href="/dashboard">Dashboard</a>
+    <a href="/logout">Logout</a>
+    {% else %}
+    <a href="/login">Login</a>
+    <a href="/register">Daftar</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>🔍 Lacak Paket Anda</h1>
+  <p>Masukkan nomor resi untuk melihat status pengiriman real-time</p>
+  <form method="POST">
+    <div class="search-box">
+      <input type="text" name="no_resi" placeholder="Contoh: LGSJKT2412151234" 
+             value="{{ no_resi }}" autocomplete="off">
+      <button type="submit"><i class="fas fa-search"></i> Lacak</button>
+    </div>
+  </form>
+</div>
+
+<div class="container">
+  {% if no_resi and not paket %}
+  <div class="not-found">
+    <i class="fas fa-search" style="font-size:48px;color:#E84B13;opacity:.4;display:block;margin-bottom:16px;"></i>
+    <div style="font-weight:800;font-size:18px;color:#1A1A2E;margin-bottom:8px;">Resi Tidak Ditemukan</div>
+    <div style="color:#6B7280;">Nomor resi <strong style="color:#E84B13;">{{ no_resi }}</strong> tidak ditemukan dalam sistem kami.</div>
+    <div style="color:#9CA3AF;font-size:13px;margin-top:8px;">Pastikan nomor resi benar dan sudah terdaftar.</div>
+  </div>
+  {% endif %}
+
+  {% if paket %}
+  <!-- STATUS PROGRESS -->
+  {% set status_order = ['created','sorting_origin','in_transit_gateway','gateway_processing','on_transit','arrived_destination','out_for_delivery','delivered'] %}
+  {% set cur_idx = status_order.index(paket.status) if paket.status in status_order else 0 %}
+  <div class="card">
+    <div class="card-header">
+      <h3>📦 Status Pengiriman</h3>
+      {% set s = {'created':('Paket Dibuat','secondary'),'sorting_origin':('Sorting Asal','warning'),'in_transit_gateway':('Menuju Gateway','info'),'gateway_processing':('Gateway','info'),'on_transit':('Dalam Perjalanan','warning'),'arrived_destination':('Di Cabang Tujuan','primary'),'out_for_delivery':('Sedang Diantar','primary'),'delivered':('Terkirim ✓','success'),'returned':('Dikembalikan','danger'),'problem':('Bermasalah','danger')} %}
+      {% set si = s.get(paket.status, (paket.status, 'secondary')) %}
+      <span class="badge badge-{{ si[1] }}" style="font-size:13px;padding:7px 14px;">{{ si[0] }}</span>
+    </div>
+    <div class="card-body">
+      <div class="progress-bar">
+        {% set steps = [('📦','Dibuat'),('🔄','Sorting'),('🚚','Gateway'),('✈️','Transit'),('🏢','Cabang'),('🏠','Diantar'),('✅','Selesai')] %}
+        {% set prog_map = [0,1,2,3,4,5,6] %}
+        {% for icon, label in steps %}
+        {% set idx = loop.index0 %}
+        <div class="prog-step">
+          <div class="prog-circle {{ 'done' if cur_idx > idx else ('active' if cur_idx == idx else '') }}">{{ icon }}</div>
+          <div class="prog-label {{ 'done' if cur_idx > idx else ('active' if cur_idx == idx else '') }}">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO PAKET -->
+  <div class="card">
+    <div class="card-header"><h3>📋 Detail Paket</h3></div>
+    <div class="card-body">
+      <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #F3F4F6;">
+        <div style="font-size:12px;color:#9CA3AF;margin-bottom:4px;">No. Resi</div>
+        <div class="resi-code">{{ paket.no_resi }}</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:4px;">Layanan: {{ paket.layanan_kode }} – {{ paket.layanan_nama }}</div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Pengirim</label>
+          <span>{{ paket.pengirim }}</span>
+        </div>
+        <div class="info-item">
+          <label>Penerima</label>
+          <span>{{ paket.nama_penerima }}<br><span style="font-weight:400;font-size:12px;color:#6B7280;">{{ paket.no_hp_penerima }}</span></span>
+        </div>
+        <div class="info-item">
+          <label>Kota Asal</label>
+          <span>{{ paket.kota_asal }}</span>
+        </div>
+        <div class="info-item">
+          <label>Kota Tujuan</label>
+          <span>{{ paket.kota_tujuan }}</span>
+        </div>
+        <div class="info-item">
+          <label>Berat / Berat Bayar</label>
+          <span>{{ paket.berat }} kg / {{ paket.berat_bayar }} kg</span>
+        </div>
+        <div class="info-item">
+          <label>Total Biaya</label>
+          <span style="color:#E84B13;">Rp{{ "{:,.0f}".format(paket.total_biaya|float) }}</span>
+        </div>
+        {% if paket.isi_paket %}
+        <div class="info-item">
+          <label>Isi Paket</label>
+          <span>{{ paket.isi_paket }}</span>
+        </div>
+        {% endif %}
+        {% if paket.pod_penerima %}
+        <div class="info-item">
+          <label>Diterima oleh</label>
+          <span style="color:#10B981;">{{ paket.pod_penerima }} ✓</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE TRACKING -->
+  <div class="card">
+    <div class="card-header"><h3>🗺️ Riwayat Perjalanan Paket</h3></div>
+    <div class="card-body">
+      {% if riwayat %}
+      <div class="timeline">
+        {% for r in riwayat|reverse %}
+        {% set is_last = loop.first %}
+        <div class="t-item">
+          <div class="t-dot {{ 'done' if not is_last else '' }}"></div>
+          <div class="t-time">{{ r.created_at.strftime('%d %b %Y, %H:%M') if r.created_at else '-' }} · {{ r.petugas }}</div>
+          {% set sl = {'created':('Paket Dibuat',''),'sorting_origin':('Sorting Cabang Asal',''),'in_transit_gateway':('Dikirim ke Gateway',''),'gateway_processing':('Proses di Gateway',''),'on_transit':('Dalam Perjalanan Antar Kota',''),'arrived_destination':('Tiba di Cabang Tujuan',''),'out_for_delivery':('Sedang Diantar Kurir',''),'delivered':('Paket Terkirim ✅',''),'returned':('Dikembalikan',''),'problem':('Bermasalah','')} %}
+          <div class="t-status">{{ sl.get(r.status, (r.status,''))[0] }}</div>
+          {% if r.lokasi %}<div class="t-loc"><i class="fas fa-map-marker-alt" style="color:#E84B13;font-size:11px;"></i> {{ r.lokasi }}</div>{% endif %}
+          {% if r.keterangan %}<div class="t-desc">{{ r.keterangan }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <i class="fas fa-route"></i>
+        Belum ada riwayat perjalanan
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not no_resi %}
+  <div style="text-align:center;padding:40px;">
+    <div style="font-size:56px;margin-bottom:16px;">📦</div>
+    <div style="font-weight:700;font-size:18px;color:#1A1A2E;margin-bottom:8px;">Lacak Paket Anda</div>
+    <div style="color:#6B7280;font-size:14px;">Masukkan nomor resi pengiriman di kolom pencarian di atas</div>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>
