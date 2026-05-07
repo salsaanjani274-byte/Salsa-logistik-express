@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Riwayat Pengiriman – Driver – LogisTik{% endblock %}
+{% block topbar_title %}Riwayat Pengiriman{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Driver</div>
+<a href="/driver" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/driver/riwayat" class="nav-item active"><i class="fas fa-history"></i> Riwayat Pengiriman</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="fas fa-history" style="color:var(--primary);margin-right:8px;"></i>Riwayat Pengiriman</h2>
+  <p>Semua paket yang pernah Anda tangani</p>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No Resi</th><th>Rute</th><th>Gateway Asal</th><th>Gateway Tujuan</th><th>Layanan</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pakets %}
+      <tr>
+        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td style="font-size:12px;font-weight:600;">{{ p.kota_asal }} → {{ p.kota_tujuan }}</td>
+        <td style="font-size:12px;">{{ p.gateway_asal_nama or '-' }}</td>
+        <td style="font-size:12px;">{{ p.gateway_tujuan_nama or '-' }}</td>
+        <td><span class="badge badge-info">{{ p.layanan_kode }}</span></td>
+        <td>
+          {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
+          <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:50px;color:#6B7280;">Belum ada riwayat pengiriman</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

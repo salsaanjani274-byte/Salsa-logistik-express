@@ -6,55 +6,118 @@
 <div class="nav-section">Menu Utama</div>
 <a href="/pengelola" class="nav-item"><i class="fas fa-chart-pie"></i> Dashboard</a>
 <a href="/pengelola/laporan" class="nav-item active"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keuangan" class="nav-item"><i class="fas fa-chart-line"></i> Laporan Keuangan</a>
 <a href="/pengelola/keterlambatan" class="nav-item"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
 <div class="nav-section">Manajemen</div>
 <a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h2>📊 Laporan Distribusi Paket</h2>
-  <p>Data seluruh paket yang terdaftar dalam sistem</p>
-</div>
-
 <!-- STATUS SUMMARY -->
 <div class="card" style="margin-bottom:24px;">
-  <div class="card-header"><h5>Rekap Status Paket</h5></div>
-  <div class="card-body">
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      {% for sc in status_count %}
-      {% set s = STATUS_LABEL.get(sc.status, (sc.status, 'secondary')) %}
-      <div style="background:var(--bg);border-radius:12px;padding:14px 20px;text-align:center;min-width:130px;border:1px solid var(--border);">
-        <div style="font-size:22px;font-weight:800;font-family:'Space Grotesk',sans-serif;">{{ sc.total }}</div>
-        <span class="badge badge-{{ s[1] }}" style="margin-top:6px;">{{ s[0] }}</span>
-      </div>
-      {% endfor %}
+  <div class="card-header"><h5>Rekap Status Paket (Semua Waktu)</h5></div>
+  <div style="padding:16px;display:flex;gap:12px;flex-wrap:wrap;">
+    {% for sc in status_count %}
+    {% set s = STATUS_LABEL.get(sc.status, (sc.status, 'secondary')) %}
+    <div style="background:var(--bg);border-radius:12px;padding:14px 20px;text-align:center;min-width:130px;border:1px solid var(--border);">
+      <div style="font-size:22px;font-weight:800;font-family:'Space Grotesk',sans-serif;">{{ sc.total }}</div>
+      <span class="badge badge-{{ s[1] }}" style="margin-top:6px;">{{ s[0] }}</span>
     </div>
+    {% endfor %}
   </div>
 </div>
 
-<!-- TABLE SEMUA PAKET -->
+<!-- FILTER -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <h5><i class="fas fa-filter" style="color:var(--primary);margin-right:8px;"></i>Filter Laporan</h5>
+  </div>
+  <div style="padding:16px;">
+    <form method="GET" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <!-- Filter Cabang -->
+      <div class="form-group" style="margin-bottom:0;flex:2;min-width:180px;">
+        <label class="form-label">Cabang</label>
+        <select class="form-control" name="cabang_id">
+          <option value="">— Semua Cabang —</option>
+          {% for cb in all_cabangs %}
+          <option value="{{ cb.id }}" {% if cabang_filter == cb.id|string %}selected{% endif %}>
+            {{ cb.nama_cabang }} ({{ cb.tipe }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Dari Tanggal -->
+      <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+        <label class="form-label">Dari Tanggal</label>
+        <input type="date" class="form-control" name="tgl_dari" value="{{ tgl_dari }}">
+      </div>
+      <!-- Sampai Tanggal -->
+      <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+        <label class="form-label">Sampai Tanggal</label>
+        <input type="date" class="form-control" name="tgl_sampai" value="{{ tgl_sampai }}">
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Tampilkan</button>
+        <a href="/pengelola/laporan" class="btn btn-outline"><i class="fas fa-times"></i> Reset</a>
+      </div>
+    </form>
+    {% if cabang_filter or tgl_dari or tgl_sampai %}
+    <div style="margin-top:10px;padding:8px 12px;background:rgba(232,75,19,0.07);border-radius:8px;font-size:13px;color:var(--primary);display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-info-circle"></i>
+      Filter aktif —
+      {% if tgl_dari %}Dari: <strong>{{ tgl_dari }}</strong>{% endif %}
+      {% if tgl_sampai %} s/d <strong>{{ tgl_sampai }}</strong>{% endif %}
+      — <strong>{{ pakets|length }}</strong> paket ditemukan
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- TABLE PAKET -->
 <div class="card">
   <div class="card-header">
-    <h5><i class="fas fa-table" style="color:var(--primary);margin-right:8px;"></i>Semua Data Paket</h5>
-    <span style="font-size:13px;color:#6B7280;">{{ pakets|length }} paket total</span>
+    <h5><i class="fas fa-table" style="color:var(--primary);margin-right:8px;"></i>
+      Data Paket
+      {% if tgl_dari or tgl_sampai %}
+        ({{ tgl_dari or '...' }} s/d {{ tgl_sampai or '...' }})
+      {% endif %}
+    </h5>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:13px;color:#6B7280;">{{ pakets|length }} paket</span>
+      <button onclick="exportLaporanExcel()" class="btn btn-sm" style="white-space:nowrap;background:#217346;color:#fff;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;">
+        <i class="fas fa-file-excel"></i> Export Excel
+      </button>
+      <button onclick="exportLaporanPDF()" class="btn btn-danger btn-sm" style="white-space:nowrap;">
+        <i class="fas fa-file-pdf"></i> Export PDF
+      </button>
+    </div>
   </div>
   <div class="table-wrap">
-    <table>
+    <table id="tabelLaporan">
       <thead><tr>
         <th>No</th><th>No Resi</th><th>Pengirim</th><th>Layanan</th>
-        <th>Asal → Tujuan</th><th>Berat</th><th>Biaya</th><th>Cabang Asal</th><th>Status</th><th>Tanggal</th>
+        <th>Asal → Tujuan</th><th>Berat Bayar</th><th>Biaya</th>
+        <th>Pembayaran</th><th>Cabang</th><th>Status</th><th>Tanggal</th>
       </tr></thead>
       <tbody>
       {% for p in pakets %}
       <tr>
         <td style="color:#9CA3AF;font-size:12px;">{{ loop.index }}</td>
-        <td><span class="resi-code">{{ p.no_resi }}</span></td>
+        <td><span class="resi-code" style="font-size:11px;">{{ p.no_resi }}</span></td>
         <td style="font-size:13px;">{{ p.pengirim }}</td>
-        <td><span class="badge badge-{{ 'primary' if p.layanan=='YES' else 'info' }}">{{ p.layanan }}</span></td>
+        <td><span class="badge badge-info">{{ p.layanan }}</span></td>
         <td style="font-size:13px;">{{ p.kota_asal }} → {{ p.kota_tujuan }}</td>
         <td style="font-size:13px;">{{ p.berat_bayar }} kg</td>
         <td style="font-size:13px;"><strong>Rp{{ "{:,.0f}".format(p.total_biaya|float) }}</strong></td>
+        <td>
+          {% if p.payment_status == 'lunas' %}
+            <span class="badge badge-success">Lunas</span>
+          {% elif p.payment_status == 'pending' %}
+            <span class="badge badge-warning">Pending</span>
+          {% else %}
+            <span class="badge badge-secondary">-</span>
+          {% endif %}
+        </td>
         <td style="font-size:12px;">{{ p.cabang_asal }}</td>
         <td>
           {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
@@ -63,10 +126,326 @@
         <td style="font-size:12px;color:#6B7280;">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '-' }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="10" style="text-align:center;padding:40px;color:#6B7280;">Belum ada data paket</td></tr>
+      <tr><td colspan="11" style="text-align:center;padding:40px;color:#6B7280;">Belum ada paket pada periode ini</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function exportLaporanExcel() {
+    const cabangEl  = document.querySelector('select[name="cabang_id"]');
+    const cabangTxt = cabangEl && cabangEl.value
+      ? cabangEl.options[cabangEl.selectedIndex].text
+      : 'Semua Cabang';
+    const tglDari   = document.querySelector('input[name="tgl_dari"]')?.value   || '-';
+    const tglSampai = document.querySelector('input[name="tgl_sampai"]')?.value || '-';
+    const now       = new Date().toLocaleString('id-ID');
+
+    const rows = document.querySelectorAll('#tabelLaporan tbody tr');
+    let totalBiaya = 0, jumlahRows = 0;
+    let tableRows  = '';
+
+    rows.forEach(r => {
+      const cells = r.querySelectorAll('td');
+      if (!cells.length) return;
+      const biayaText = cells[6]?.textContent.replace(/[^0-9]/g, '') || '0';
+      totalBiaya += parseInt(biayaText, 10) || 0;
+      jumlahRows++;
+      tableRows += `<tr>
+        <td>${cells[0]?.textContent.trim()}</td>
+        <td>${cells[1]?.textContent.trim()}</td>
+        <td>${cells[2]?.textContent.trim()}</td>
+        <td>${cells[3]?.textContent.trim()}</td>
+        <td>${cells[4]?.textContent.trim()}</td>
+        <td>${cells[5]?.textContent.trim()}</td>
+        <td style="font-weight:700;">${cells[6]?.textContent.trim()}</td>
+        <td>${cells[7]?.textContent.trim()}</td>
+        <td>${cells[8]?.textContent.trim()}</td>
+        <td>${cells[9]?.textContent.trim()}</td>
+        <td>${cells[10]?.textContent.trim()}</td>
+      </tr>`;
+    });
+
+    const fmt = v => 'Rp' + v.toLocaleString('id-ID');
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:x="urn:schemas-microsoft-com:office:excel"
+            xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8">
+      <style>
+        body  { font-family: Arial, sans-serif; font-size: 10pt; }
+        /* ── KOP SURAT ── */
+        .kop  { width:100%; border-collapse:collapse; margin-bottom:0; }
+        .kop td { vertical-align:middle; padding:4px 8px; }
+        .kop .logo-box { text-align:center; width:80px; }
+        .kop .logo-icon { font-size:38px; line-height:1; }
+        .kop .nama-perusahaan { font-size:18pt; font-weight:900; color:#e84b13; letter-spacing:1px; line-height:1.1; }
+        .kop .tagline { font-size:9pt; color:#666; font-style:italic; margin-top:2px; }
+        .kop .alamat  { font-size:9pt; color:#444; margin-top:4px; line-height:1.6; }
+        .kop .kontak  { font-size:9pt; color:#444; }
+        .kop .kop-right { text-align:right; vertical-align:top; padding-top:8px; }
+        .kop .iso-badge { background:#e84b13; color:white; font-size:8pt; padding:3px 8px; border-radius:4px; display:inline-block; }
+        .garis-atas { border-top: 3px solid #e84b13; margin-bottom: 0; }
+        .garis-bawah-kop { border-top: 1px solid #e84b13; margin-top: 0; }
+        .judul-dokumen { text-align:center; padding:8px 0 6px; }
+        .judul-dokumen h2 { font-size:13pt; font-weight:800; color:#1a1a1a; letter-spacing:2px; margin:0; }
+        .judul-dokumen p  { font-size:9pt; color:#666; margin:2px 0 0; }
+        /* ── KONTEN ── */
+        .meta { font-size:10pt; color:#555; margin-bottom:14px; background:#f8f8f8; padding:8px 12px; border-radius:4px; }
+        table { border-collapse: collapse; width: 100%; font-size: 9pt; }
+        thead tr { background: #e84b13; color: white; }
+        th    { padding: 6px 7px; text-align: left; border: 1px solid #c0392b; }
+        td    { padding: 5px 7px; border: 1px solid #ddd; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+        .rekap{ margin: 12px 0; border-collapse: collapse; }
+        .rekap td { border: 1px solid #ddd; padding: 6px 14px; font-size: 10pt; }
+        .rekap .lbl { color: #888; font-size: 9pt; }
+        .rekap .val { font-weight: bold; font-size: 13pt; color: #e84b13; }
+        .footer { margin-top: 16px; font-size: 9pt; color: #aaa; text-align: center; border-top:1px solid #eee; padding-top:10px; }
+        @media print { @page { margin: 12mm; size: A4 landscape; } }
+      </style></head><body>
+      <!-- ══ KOP SURAT FORMAL ══ -->
+      <hr class="garis-atas">
+      <table class="kop">
+        <tr>
+          <td class="logo-box"><div class="logo-icon">🚚</div></td>
+          <td>
+            <div class="nama-perusahaan">LOGISTIK EXPRESS</div>
+            <div class="tagline">Solusi Pengiriman Terpercaya & Tepat Waktu</div>
+            <div class="alamat">
+              Jl. Raya Logistik No. 88, Gambir, Jakarta Pusat 10110<br>
+              <span class="kontak">📞 (021) 5555-1234 &nbsp;|&nbsp; ✉ info@logistikexpress.co.id &nbsp;|&nbsp; 🌐 www.logistikexpress.co.id</span>
+            </div>
+          </td>
+          <td class="kop-right">
+            <span class="iso-badge">ISO 9001:2015</span><br>
+            <span style="font-size:8pt;color:#888;display:block;margin-top:4px;">Terakreditasi & Terpercaya</span>
+          </td>
+        </tr>
+      </table>
+      <hr class="garis-bawah-kop">
+      <div class="judul-dokumen">
+        <h2>LAPORAN PAKET</h2>
+        <p>Dokumen ini diterbitkan secara resmi oleh Sistem Manajemen LogisTik Express</p>
+      </div>
+      <hr style="border:none;border-top:2px solid #e84b13;margin-bottom:14px;">
+      <!-- ══ META INFO ══ -->
+      <div class="meta">
+        Cabang: <b>${cabangTxt}</b> &nbsp;|&nbsp;
+        Periode: <b>${tglDari} s/d ${tglSampai}</b> &nbsp;|&nbsp;
+        Total Paket: <b>${jumlahRows}</b> &nbsp;|&nbsp;
+        Dicetak: ${now}
+      </div>
+      <table class="rekap">
+        <tr>
+          <td><div class="lbl">Total Biaya Pengiriman</div><div class="val">${fmt(totalBiaya)}</div></td>
+          <td><div class="lbl">Jumlah Paket</div><div class="val" style="color:#1a1a1a;">${jumlahRows}</div></td>
+        </tr>
+      </table>
+      <table>
+        <thead><tr>
+          <th>No</th><th>No Resi</th><th>Pengirim</th><th>Layanan</th>
+          <th>Asal &rarr; Tujuan</th><th>Berat</th><th>Biaya</th>
+          <th>Pembayaran</th><th>Cabang</th><th>Status</th><th>Tanggal</th>
+        </tr></thead>
+        <tbody>${tableRows || '<tr><td colspan="11" style="text-align:center;padding:20px;color:#999;">Tidak ada data</td></tr>'}
+        <tr style="background:#fff3e0;font-weight:bold;">
+          <td colspan="6" style="text-align:right;padding:6px 7px;border:1px solid #ddd;">Total Biaya Keseluruhan</td>
+          <td style="border:1px solid #ddd;padding:6px 7px;color:#e84b13;font-size:11pt;">${fmt(totalBiaya)}</td>
+          <td colspan="4" style="border:1px solid #ddd;"></td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="footer">Laporan dicetak otomatis oleh sistem LogisTik — ${now}</div>
+      </body></html>`;
+
+    // ✅ Buka tab baru dengan preview + tombol Download Excel
+    const blob    = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const fileUrl = URL.createObjectURL(blob);
+    const fileName = `Laporan_Paket_${tglDari}_${tglSampai}.xls`;
+
+    const previewHtml = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>Preview – Laporan Paket</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f3f4f6; }
+        .toolbar {
+          position: sticky; top: 0; z-index: 999;
+          background: #217346; color: white;
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .toolbar span { font-size: 14px; font-weight: 600; flex: 1; }
+        .btn-dl {
+          background: white; color: #217346;
+          border: none; border-radius: 6px;
+          padding: 8px 18px; font-size: 13px; font-weight: 700;
+          cursor: pointer; display: flex; align-items: center; gap: 6px;
+          text-decoration: none;
+        }
+        .btn-dl:hover { background: #e6f4ec; }
+        .btn-close {
+          background: rgba(255,255,255,0.15); color: white;
+          border: none; border-radius: 6px;
+          padding: 8px 14px; font-size: 13px;
+          cursor: pointer;
+        }
+        .btn-close:hover { background: rgba(255,255,255,0.25); }
+        .preview-wrap { padding: 24px; max-width: 1100px; margin: 0 auto; }
+        .preview-frame {
+          background: white; border-radius: 8px;
+          box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+          padding: 32px; min-height: 400px;
+        }
+      </style>
+      </head><body>
+      <div class="toolbar">
+        <span>📊 Preview – Laporan Paket</span>
+        <a class="btn-dl" id="btnDownload" href="${fileUrl}" download="${fileName}">
+          ⬇️ Download Excel
+        </a>
+        <button class="btn-close" onclick="window.close()">✕ Tutup</button>
+      </div>
+      <div class="preview-wrap">
+        <div class="preview-frame">
+          ${html}
+        </div>
+      </div>
+      </body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(previewHtml);
+    win.document.close();
+  }
+
+  function exportLaporanPDF() {
+    const cabangEl  = document.querySelector('select[name="cabang_id"]');
+    const cabangTxt = cabangEl && cabangEl.value
+      ? cabangEl.options[cabangEl.selectedIndex].text
+      : 'Semua Cabang';
+    const tglDari   = document.querySelector('input[name="tgl_dari"]')?.value   || '-';
+    const tglSampai = document.querySelector('input[name="tgl_sampai"]')?.value || '-';
+
+    const rows = document.querySelectorAll('#tabelLaporan tbody tr');
+    let totalBiaya = 0, jumlahRows = 0;
+    let tableRows = '';
+
+    rows.forEach(r => {
+      const cells = r.querySelectorAll('td');
+      if (!cells.length) return;
+      const biayaText = cells[6]?.textContent.replace(/[^0-9]/g, '') || '0';
+      totalBiaya += parseInt(biayaText, 10) || 0;
+      jumlahRows++;
+      tableRows += `<tr>
+        <td>${cells[0]?.textContent.trim()}</td>
+        <td>${cells[1]?.textContent.trim()}</td>
+        <td>${cells[2]?.textContent.trim()}</td>
+        <td>${cells[3]?.textContent.trim()}</td>
+        <td>${cells[4]?.textContent.trim()}</td>
+        <td>${cells[5]?.textContent.trim()}</td>
+        <td style="font-weight:700;">${cells[6]?.textContent.trim()}</td>
+        <td>${cells[7]?.textContent.trim()}</td>
+        <td>${cells[8]?.textContent.trim()}</td>
+        <td>${cells[9]?.textContent.trim()}</td>
+        <td>${cells[10]?.textContent.trim()}</td>
+      </tr>`;
+    });
+
+    const fmt = v => 'Rp' + v.toLocaleString('id-ID');
+    const now  = new Date().toLocaleString('id-ID');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Laporan Paket – LogisTik</title>
+    <style>
+      * { box-sizing:border-box; margin:0; padding:0; }
+      body { font-family:Arial,sans-serif; font-size:10px; color:#1a1a1a; padding:20px; }
+      /* ── KOP SURAT ── */
+      .kop-table { width:100%; border-collapse:collapse; margin-bottom:0; }
+      .kop-table td { vertical-align:middle; padding:4px 6px; }
+      .logo-icon { font-size:36px; line-height:1; text-align:center; width:60px; }
+      .nama-perusahaan { font-size:17px; font-weight:900; color:#e84b13; letter-spacing:1px; line-height:1.1; }
+      .tagline { font-size:8px; color:#666; font-style:italic; margin-top:2px; }
+      .alamat  { font-size:8px; color:#444; margin-top:4px; line-height:1.6; }
+      .kop-right { text-align:right; vertical-align:top; padding-top:6px; }
+      .iso-badge { background:#e84b13; color:white; font-size:7px; padding:2px 7px; border-radius:3px; display:inline-block; }
+      .garis-kop-atas { border:none; border-top:3px solid #e84b13; margin-bottom:0; }
+      .garis-kop-bawah { border:none; border-top:1px solid #e84b13; margin-top:0; margin-bottom:0; }
+      .judul-dokumen { text-align:center; padding:7px 0 5px; }
+      .judul-dokumen h2 { font-size:12px; font-weight:800; letter-spacing:2px; color:#1a1a1a; }
+      .judul-dokumen p  { font-size:8px; color:#777; margin-top:2px; }
+      .garis-judul { border:none; border-top:2px solid #e84b13; margin-bottom:12px; }
+      /* ── META & KONTEN ── */
+      .meta { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;
+              background:#f8f8f8; padding:8px 12px; border-radius:5px; font-size:9px; }
+      .meta div { flex:1; min-width:120px; }
+      .meta label { font-weight:700; color:#888; display:block; margin-bottom:2px; font-size:8px; }
+      table { width:100%; border-collapse:collapse; font-size:9px; }
+      thead tr { background:#e84b13; color:white; }
+      th { padding:6px 5px; text-align:left; font-weight:600; }
+      td { padding:5px 5px; border-bottom:1px solid #eee; }
+      tr:nth-child(even) { background:#f9f9f9; }
+      .footer { margin-top:16px; text-align:center; font-size:8px; color:#aaa; border-top:1px solid #eee; padding-top:8px; }
+      @media print { @page { margin:12mm; size:A4 landscape; } }
+    </style></head><body>
+    <!-- ══ KOP SURAT FORMAL ══ -->
+    <hr class="garis-kop-atas">
+    <table class="kop-table">
+      <tr>
+        <td class="logo-icon">🚚</td>
+        <td>
+          <div class="nama-perusahaan">LOGISTIK EXPRESS</div>
+          <div class="tagline">Solusi Pengiriman Terpercaya &amp; Tepat Waktu</div>
+          <div class="alamat">
+            Jl. Raya Logistik No. 88, Gambir, Jakarta Pusat 10110<br>
+            📞 (021) 5555-1234 &nbsp;|&nbsp; ✉ info@logistikexpress.co.id &nbsp;|&nbsp; 🌐 www.logistikexpress.co.id
+          </div>
+        </td>
+        <td class="kop-right">
+          <span class="iso-badge">ISO 9001:2015</span><br>
+          <span style="font-size:7px;color:#888;display:block;margin-top:3px;">Terakreditasi &amp; Terpercaya</span>
+        </td>
+      </tr>
+    </table>
+    <hr class="garis-kop-bawah">
+    <div class="judul-dokumen">
+      <h2>LAPORAN PAKET</h2>
+      <p>Dokumen ini diterbitkan secara resmi oleh Sistem Manajemen LogisTik Express</p>
+    </div>
+    <hr class="garis-judul">
+    <!-- ══ META INFO ══ -->
+    <div class="meta">
+      <div><label>Cabang</label>${cabangTxt}</div>
+      <div><label>Periode</label>${tglDari} s/d ${tglSampai}</div>
+      <div><label>Total Paket</label>${jumlahRows} paket</div>
+      <div><label>Dicetak</label>${now}</div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>No</th><th>No Resi</th><th>Pengirim</th><th>Layanan</th>
+        <th>Asal &rarr; Tujuan</th><th>Berat</th><th>Biaya</th>
+        <th>Pembayaran</th><th>Cabang</th><th>Status</th><th>Tanggal</th>
+      </tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="11" style="text-align:center;padding:20px;color:#999;">Tidak ada data</td></tr>'}
+      <tr style="background:#fff3e0;font-weight:bold;">
+        <td colspan="6" style="text-align:right;padding:5px 5px;border-bottom:2px solid #e84b13;">Total Biaya Keseluruhan</td>
+        <td style="padding:5px 5px;border-bottom:2px solid #e84b13;color:#e84b13;font-size:10px;">${fmt(totalBiaya)}</td>
+        <td colspan="4" style="border-bottom:2px solid #e84b13;"></td>
+      </tr>
+      </tbody>
+    </table>
+    <div class="footer">Laporan dicetak otomatis oleh sistem LogisTik &mdash; ${now}</div>
+    </body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.print(); };
+  }
+</script>
 {% endblock %}

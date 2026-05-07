@@ -1,0 +1,712 @@
+{% extends 'base.html' %}
+{% block title %}Laporan Keuangan – LogisTik{% endblock %}
+{% block topbar_title %}Laporan Keuangan{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/pengelola" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/pengelola/laporan" class="nav-item"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keuangan" class="nav-item active"><i class="fas fa-chart-line"></i> Laporan Keuangan</a>
+<a href="/pengelola/keterlambatan" class="nav-item"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+<!-- REKAP KEUANGAN -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-coins"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.total_omset|float) }}</div>
+      <div class="stat-label">Total Omset</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.total_lunas|float) }}</div>
+      <div class="stat-label">Sudah Lunas</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.total_pending|float) }}</div>
+      <div class="stat-label">Belum Dibayar</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="fas fa-receipt"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ rekap.total_transaksi }}</div>
+      <div class="stat-label">Total Transaksi</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.bulan_ini|float) }}</div>
+      <div class="stat-label">Bulan Ini (Lunas)</div>
+    </div>
+  </div>
+</div>
+
+<!-- TREN 6 BULAN -->
+{% if tren %}
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <h5><i class="fas fa-chart-bar" style="color:var(--primary);margin-right:8px;"></i>Tren Pendapatan 6 Bulan</h5>
+  </div>
+  <div style="padding:20px;">
+    <canvas id="chartTren" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- PER CABANG -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <h5><i class="fas fa-building" style="color:var(--primary);margin-right:8px;"></i>Pendapatan per Cabang</h5>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cabang</th>
+          <th>Total Transaksi</th>
+          <th>Total Pendapatan</th>
+          <th>Sudah Lunas</th>
+          <th>Progress</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set max_p = per_cabang[0].total_pendapatan|float if per_cabang else 1 %}
+        {% for cb in per_cabang %}
+        <tr>
+          <td><strong>{{ cb.nama_cabang }}</strong></td>
+          <td>{{ cb.total_transaksi }}</td>
+          <td><strong>Rp{{ "{:,.0f}".format(cb.total_pendapatan|float) }}</strong></td>
+          <td>Rp{{ "{:,.0f}".format(cb.sudah_lunas|float) }}</td>
+          <td style="min-width:120px;">
+            {% set pct = ((cb.sudah_lunas|float / cb.total_pendapatan|float * 100) if cb.total_pendapatan|float > 0 else
+            0)|int %}
+            <div style="background:#E5E7EB;border-radius:99px;height:8px;">
+              <div style="background:var(--primary);height:8px;border-radius:99px;width:{{ pct }}%;"></div>
+            </div>
+            <small style="color:#6B7280;">{{ pct }}% lunas</small>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center;color:#6B7280;padding:30px;">Belum ada data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <h5><i class="fas fa-filter" style="color:var(--primary);margin-right:8px;"></i>Filter Keuangan</h5>
+  </div>
+  <div style="padding:16px;">
+    <form method="GET" action="/pengelola/keuangan" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="margin-bottom:0;flex:2;min-width:180px;">
+        <label class="form-label">Cabang</label>
+        <select class="form-control" name="cabang_id">
+          <option value="">— Semua Cabang —</option>
+          {% for cb in all_cabangs %}
+          <option value="{{ cb.id }}" {% if cabang_filter == cb.id|string %}selected{% endif %}>
+            {{ cb.nama_cabang }} ({{ cb.tipe }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+        <label class="form-label">Dari Tanggal</label>
+        <input type="date" class="form-control" name="tgl_dari" value="{{ tgl_dari }}">
+      </div>
+      <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+        <label class="form-label">Sampai Tanggal</label>
+        <input type="date" class="form-control" name="tgl_sampai" value="{{ tgl_sampai }}">
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Tampilkan</button>
+        <a href="/pengelola/keuangan" class="btn btn-outline"><i class="fas fa-times"></i> Reset</a>
+      </div>
+    </form>
+    {% if cabang_filter or tgl_dari or tgl_sampai %}
+    <div style="margin-top:10px;padding:8px 12px;background:rgba(232,75,19,0.07);border-radius:8px;font-size:13px;color:var(--primary);display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-info-circle"></i>
+      Filter aktif —
+      {% if tgl_dari %}Dari: <strong>{{ tgl_dari }}</strong>{% endif %}
+      {% if tgl_sampai %} s/d <strong>{{ tgl_sampai }}</strong>{% endif %}
+      — <strong>{{ payments|length }}</strong> transaksi ditemukan
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- DETAIL SEMUA PEMBAYARAN -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-list" style="color:var(--primary);margin-right:8px;"></i>Semua Transaksi Pembayaran
+      {% if cabang_filter or tgl_dari or tgl_sampai %}
+      <span style="font-size:12px;color:#6B7280;font-weight:400;margin-left:8px;">(Hasil Filter)</span>
+      {% endif %}
+    </h5>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="searchPay" placeholder="🔍 Cari resi, pengirim..."
+        style="padding:6px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;" onkeyup="filterTable()">
+      <button onclick="exportExcel()" class="btn btn-sm" style="white-space:nowrap;background:#217346;color:#fff;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;">
+        <i class="fas fa-file-excel"></i> Export Excel
+      </button>
+      <button onclick="exportPDF()" class="btn btn-danger btn-sm" style="white-space:nowrap;">
+        <i class="fas fa-file-pdf"></i> Export PDF
+      </button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="tabelPay">
+      <thead>
+        <tr>
+          <th>No Resi</th>
+          <th>Pengirim</th>
+          <th>Cabang</th>
+          <th>Layanan</th>
+          <th>Tujuan</th>
+          <th>Jumlah</th>
+          <th>Metode</th>
+          <th>Status</th>
+          <th>Tanggal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for py in payments %}
+        <tr>
+          <td><span class="resi-code" style="font-size:11px;">{{ py.no_resi }}</span></td>
+          <td>{{ py.pengirim_nama }}</td>
+          <td style="font-size:12px;">{{ py.cabang_nama }}</td>
+          <td><span class="badge badge-info">{{ py.layanan_kode }}</span></td>
+          <td>{{ py.kota_tujuan }}</td>
+          <td><strong>Rp{{ "{:,.0f}".format(py.jumlah|float) }}</strong></td>
+          <td style="text-transform:capitalize;">{{ py.metode }}</td>
+          <td>
+            {% if py.status == 'lunas' %}
+            <span class="badge badge-success">Lunas</span>
+            {% elif py.status == 'pending' %}
+            <span class="badge badge-warning">Pending</span>
+            {% else %}
+            <span class="badge badge-danger">Batal</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px;">{{ py.created_at.strftime('%d/%m/%Y') if py.created_at else '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" style="text-align:center;color:#6B7280;padding:30px;">Belum ada data pembayaran</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  {% if tren %}
+  const trenData = {{ tren | tojson }};
+  const ctx = document.getElementById('chartTren').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: trenData.map(d => d.bln),
+      datasets: [
+        {
+          label: 'Lunas',
+          data: trenData.map(d => parseFloat(d.lunas) || 0),
+          backgroundColor: 'rgba(16,185,129,0.7)',
+          borderRadius: 6,
+        },
+        {
+          label: 'Pending',
+          data: trenData.map(d => parseFloat(d.pending) || 0),
+          backgroundColor: 'rgba(245,158,11,0.6)',
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        y: {
+          ticks: {
+            callback: function (v) {
+              if (v >= 1000000) {
+                return 'Rp' + (v / 1000000).toFixed(1) + ' jt';
+              } else if (v >= 1000) {
+                return 'Rp' + (v / 1000).toFixed(0) + ' rb';
+              }
+              return 'Rp' + v;
+            }
+          }
+        }
+      }
+    }
+  });
+  {% endif %}
+
+  function filterTable() {
+    const q = document.getElementById('searchPay').value.toLowerCase();
+    const rows = document.querySelectorAll('#tabelPay tbody tr');
+    rows.forEach(r => {
+      r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  function exportExcel() {
+    const cabangEl  = document.querySelector('select[name="cabang_id"]');
+    const cabangTxt = cabangEl && cabangEl.value
+      ? cabangEl.options[cabangEl.selectedIndex].text : 'Semua Cabang';
+    const tglDari   = document.querySelector('input[name="tgl_dari"]')?.value   || '-';
+    const tglSampai = document.querySelector('input[name="tgl_sampai"]')?.value || '-';
+    const now       = new Date().toLocaleString('id-ID');
+
+    const rows = document.querySelectorAll('#tabelPay tbody tr');
+    let totalLunas = 0, totalPending = 0, jumlahRows = 0;
+    let tableRows = '';
+
+    rows.forEach(r => {
+      if (r.style.display === 'none') return;
+      const cells = r.querySelectorAll('td');
+      if (!cells.length) return;
+      const status = cells[7]?.textContent.trim() || '';
+      const jumlah = cells[5]?.textContent.replace(/[^0-9]/g, '') || '0';
+      const jNum   = parseInt(jumlah, 10) || 0;
+      if (status.includes('Lunas'))        totalLunas   += jNum;
+      else if (status.includes('Pending')) totalPending += jNum;
+      jumlahRows++;
+      tableRows += `<tr>
+        <td>${cells[0]?.textContent.trim()}</td>
+        <td>${cells[1]?.textContent.trim()}</td>
+        <td>${cells[2]?.textContent.trim()}</td>
+        <td>${cells[3]?.textContent.trim()}</td>
+        <td>${cells[4]?.textContent.trim()}</td>
+        <td style="font-weight:700;">${cells[5]?.textContent.trim()}</td>
+        <td>${cells[6]?.textContent.trim()}</td>
+        <td>${status}</td>
+        <td>${cells[8]?.textContent.trim()}</td>
+      </tr>`;
+    });
+
+    const fmt = v => 'Rp' + v.toLocaleString('id-ID');
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:x="urn:schemas-microsoft-com:office:excel"
+            xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8">
+      <style>
+        body  { font-family: Arial, sans-serif; font-size: 10pt; }
+        /* ── KOP SURAT ── */
+        .kop  { width:100%; border-collapse:collapse; margin-bottom:0; }
+        .kop td { vertical-align:middle; padding:4px 8px; }
+        .kop .logo-box { text-align:center; width:80px; }
+        .kop .logo-icon { font-size:38px; line-height:1; }
+        .kop .nama-perusahaan { font-size:18pt; font-weight:900; color:#e84b13; letter-spacing:1px; line-height:1.1; }
+        .kop .tagline { font-size:9pt; color:#666; font-style:italic; margin-top:2px; }
+        .kop .alamat  { font-size:9pt; color:#444; margin-top:4px; line-height:1.6; }
+        .kop .kontak  { font-size:9pt; color:#444; }
+        .kop .kop-right { text-align:right; vertical-align:top; padding-top:8px; }
+        .kop .iso-badge { background:#e84b13; color:white; font-size:8pt; padding:3px 8px; border-radius:4px; display:inline-block; }
+        .garis-atas { border-top: 3px solid #e84b13; margin-bottom: 0; }
+        .garis-bawah-kop { border-top: 1px solid #e84b13; margin-top: 0; }
+        .judul-dokumen { text-align:center; padding:8px 0 6px; }
+        .judul-dokumen h2 { font-size:13pt; font-weight:800; color:#1a1a1a; letter-spacing:2px; margin:0; }
+        .judul-dokumen p  { font-size:9pt; color:#666; margin:2px 0 0; }
+        /* ── KONTEN ── */
+        .meta { font-size:10pt; color:#555; margin-bottom:14px; background:#f8f8f8; padding:8px 12px; border-radius:4px; }
+        table { border-collapse: collapse; width: 100%; font-size: 9pt; }
+        thead tr { background: #e84b13; color: white; }
+        th    { padding: 7px 8px; text-align: left; border: 1px solid #c0392b; }
+        td    { padding: 6px 8px; border: 1px solid #ddd; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+        .rekap{ margin: 12px 0; border-collapse: collapse; }
+        .rekap td { border: 1px solid #ddd; padding: 6px 14px; font-size: 10pt; }
+        .rekap .lbl { color: #888; font-size: 9pt; }
+        .rekap .val { font-weight: bold; font-size: 13pt; color: #e84b13; }
+        .footer { margin-top: 16px; font-size: 9pt; color: #aaa; text-align: center; border-top:1px solid #eee; padding-top:10px; }
+        @media print { @page { margin: 12mm; } }
+      </style></head><body>
+      <!-- ══ KOP SURAT FORMAL ══ -->
+      <hr class="garis-atas">
+      <table class="kop">
+        <tr>
+          <td class="logo-box"><div class="logo-icon">🚚</div></td>
+          <td>
+            <div class="nama-perusahaan">LOGISTIK EXPRESS</div>
+            <div class="tagline">Solusi Pengiriman Terpercaya & Tepat Waktu</div>
+            <div class="alamat">
+              Jl. Raya Logistik No. 88, Gambir, Jakarta Pusat 10110<br>
+              <span class="kontak">📞 (021) 5555-1234 &nbsp;|&nbsp; ✉ info@logistikexpress.co.id &nbsp;|&nbsp; 🌐 www.logistikexpress.co.id</span>
+            </div>
+          </td>
+          <td class="kop-right">
+            <span class="iso-badge">ISO 9001:2015</span><br>
+            <span style="font-size:8pt;color:#888;display:block;margin-top:4px;">Terakreditasi & Terpercaya</span>
+          </td>
+        </tr>
+      </table>
+      <hr class="garis-bawah-kop">
+      <div class="judul-dokumen">
+        <h2>LAPORAN KEUANGAN – TRANSAKSI PEMBAYARAN</h2>
+        <p>Dokumen ini diterbitkan secara resmi oleh Sistem Manajemen LogisTik Express</p>
+      </div>
+      <hr style="border:none;border-top:2px solid #e84b13;margin-bottom:14px;">
+      <!-- ══ META INFO ══ -->
+      <div class="meta">
+        Cabang: <b>${cabangTxt}</b> &nbsp;|&nbsp;
+        Periode: <b>${tglDari} s/d ${tglSampai}</b> &nbsp;|&nbsp;
+        Total Transaksi: <b>${jumlahRows}</b> &nbsp;|&nbsp;
+        Dicetak: ${now}
+      </div>
+      <table class="rekap">
+        <tr>
+          <td><div class="lbl">Sudah Lunas</div><div class="val" style="color:#10b981;">${fmt(totalLunas)}</div></td>
+          <td><div class="lbl">Belum Dibayar</div><div class="val" style="color:#f59e0b;">${fmt(totalPending)}</div></td>
+        </tr>
+      </table>
+      <table>
+        <thead><tr>
+          <th>No Resi</th><th>Pengirim</th><th>Cabang</th><th>Layanan</th>
+          <th>Tujuan</th><th>Jumlah</th><th>Metode</th><th>Status</th><th>Tanggal</th>
+        </tr></thead>
+        <tbody>${tableRows || '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999;">Tidak ada data</td></tr>'}
+        <tr style="background:#fff3e0;font-weight:bold;">
+          <td colspan="5" style="text-align:right;padding:6px 8px;border:1px solid #ddd;">Total Biaya Keseluruhan</td>
+          <td style="border:1px solid #ddd;padding:6px 8px;color:#e84b13;font-size:11pt;">${fmt(totalLunas + totalPending)}</td>
+          <td colspan="3" style="border:1px solid #ddd;"></td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="footer">Laporan dicetak otomatis oleh sistem LogisTik — ${now}</div>
+      </body></html>`;
+
+    // ✅ Buka tab baru dengan preview + tombol Download Excel
+    const blob    = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const fileUrl = URL.createObjectURL(blob);
+    const fileName = `Laporan_Keuangan_${tglDari}_${tglSampai}.xls`;
+
+    const previewHtml = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>Preview – Laporan Keuangan</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f3f4f6; }
+        .toolbar {
+          position: sticky; top: 0; z-index: 999;
+          background: #217346; color: white;
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .toolbar span { font-size: 14px; font-weight: 600; flex: 1; }
+        .btn-dl {
+          background: white; color: #217346;
+          border: none; border-radius: 6px;
+          padding: 8px 18px; font-size: 13px; font-weight: 700;
+          cursor: pointer; display: flex; align-items: center; gap: 6px;
+          text-decoration: none;
+        }
+        .btn-dl:hover { background: #e6f4ec; }
+        .btn-close {
+          background: rgba(255,255,255,0.15); color: white;
+          border: none; border-radius: 6px;
+          padding: 8px 14px; font-size: 13px;
+          cursor: pointer;
+        }
+        .btn-close:hover { background: rgba(255,255,255,0.25); }
+        .preview-wrap { padding: 24px; max-width: 960px; margin: 0 auto; }
+        .preview-frame {
+          background: white; border-radius: 8px;
+          box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+          padding: 32px; min-height: 400px;
+        }
+      </style>
+      </head><body>
+      <div class="toolbar">
+        <span>📊 Preview – Laporan Keuangan</span>
+        <a class="btn-dl" id="btnDownload" href="${fileUrl}" download="${fileName}">
+          ⬇️ Download Excel
+        </a>
+        <button class="btn-close" onclick="window.close()">✕ Tutup</button>
+      </div>
+      <div class="preview-wrap">
+        <div class="preview-frame">
+          ${html}
+        </div>
+      </div>
+      </body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(previewHtml);
+    win.document.close();
+  }
+
+  // ── Signature storage ──────────────────────────────────────────────────────
+  const ttdData = { dibuat: null, diperiksa: null, disetujui: null };
+
+  function handleTtdUpload(slot, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      ttdData[slot] = e.target.result;
+      const preview = document.getElementById('prev-' + slot);
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      document.getElementById('lbl-' + slot).textContent = '✅ ' + file.name;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearTtd(slot) {
+    ttdData[slot] = null;
+    const preview = document.getElementById('prev-' + slot);
+    preview.src = '';
+    preview.style.display = 'none';
+    document.getElementById('inp-' + slot).value = '';
+    document.getElementById('lbl-' + slot).textContent = '';
+  }
+
+  function openTtdModal() {
+    document.getElementById('modalTtdKeu').style.display = 'flex';
+  }
+
+  function closeTtdModal() {
+    document.getElementById('modalTtdKeu').style.display = 'none';
+  }
+
+  function exportPDF() { openTtdModal(); }
+
+  function doExportPDFKeu() {
+    closeTtdModal();
+    const cabangEl = document.querySelector('select[name="cabang_id"]');
+    const cabangTxt = cabangEl && cabangEl.value ? cabangEl.options[cabangEl.selectedIndex].text : 'Semua Cabang';
+    const tglDari   = document.querySelector('input[name="tgl_dari"]')?.value   || '-';
+    const tglSampai = document.querySelector('input[name="tgl_sampai"]')?.value || '-';
+
+    // Collect visible rows from table
+    const rows = document.querySelectorAll('#tabelPay tbody tr');
+    let totalLunas = 0, totalPending = 0, jumlahRows = 0;
+    let tableRows = '';
+    rows.forEach(r => {
+      if (r.style.display === 'none') return;
+      const cells = r.querySelectorAll('td');
+      if (!cells.length) return;
+      const status = cells[7]?.textContent.trim() || '';
+      const jumlah = cells[5]?.textContent.replace(/[^0-9]/g, '') || '0';
+      const jNum   = parseInt(jumlah, 10) || 0;
+      if (status.includes('Lunas')) totalLunas += jNum;
+      else if (status.includes('Pending')) totalPending += jNum;
+      jumlahRows++;
+      tableRows += `<tr>
+        <td>${cells[0]?.textContent.trim()}</td>
+        <td>${cells[1]?.textContent.trim()}</td>
+        <td>${cells[2]?.textContent.trim()}</td>
+        <td>${cells[3]?.textContent.trim()}</td>
+        <td>${cells[4]?.textContent.trim()}</td>
+        <td style="font-weight:700;">${cells[5]?.textContent.trim()}</td>
+        <td>${cells[6]?.textContent.trim()}</td>
+        <td>${status}</td>
+        <td>${cells[8]?.textContent.trim()}</td>
+      </tr>`;
+    });
+
+    const fmt = v => 'Rp' + v.toLocaleString('id-ID');
+    const now = new Date().toLocaleString('id-ID');
+
+    const ttdImg = (slot, label, jabatan, divisi) => {
+      const nama = document.getElementById('nama-' + slot)?.value.trim() || '';
+      return `
+      <div style="text-align:center; min-width:160px;">
+        <p style="font-size:9px; color:#444; margin-bottom:2px;">${label},</p>
+        <div style="height:64px; width:160px; margin:0 auto; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #1a1a1a;">
+          ${ttdData[slot] ? `<img src="${ttdData[slot]}" style="max-height:60px; max-width:150px; object-fit:contain;">` : ''}
+        </div>
+        <p style="font-size:9px; font-weight:700; margin-top:4px;">${nama || jabatan}</p>
+        <p style="font-size:8px; color:#666;">${divisi}</p>
+      </div>`;
+    };
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Laporan Keuangan – LogisTik</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 10px; color: #1a1a1a; padding: 20px; }
+      /* ── KOP SURAT ── */
+      .kop-table { width:100%; border-collapse:collapse; margin-bottom:0; }
+      .kop-table td { vertical-align:middle; padding:4px 6px; }
+      .logo-icon { font-size:36px; line-height:1; text-align:center; width:60px; }
+      .nama-perusahaan { font-size:17px; font-weight:900; color:#e84b13; letter-spacing:1px; line-height:1.1; }
+      .tagline { font-size:8px; color:#666; font-style:italic; margin-top:2px; }
+      .alamat  { font-size:8px; color:#444; margin-top:4px; line-height:1.6; }
+      .kop-right { text-align:right; vertical-align:top; padding-top:6px; }
+      .iso-badge { background:#e84b13; color:white; font-size:7px; padding:2px 7px; border-radius:3px; display:inline-block; }
+      .garis-kop-atas { border:none; border-top:3px solid #e84b13; margin-bottom:0; }
+      .garis-kop-bawah { border:none; border-top:1px solid #e84b13; margin-top:0; margin-bottom:0; }
+      .judul-dokumen { text-align:center; padding:7px 0 5px; }
+      .judul-dokumen h2 { font-size:12px; font-weight:800; letter-spacing:2px; color:#1a1a1a; }
+      .judul-dokumen p  { font-size:8px; color:#777; margin-top:2px; }
+      .garis-judul { border:none; border-top:2px solid #e84b13; margin-bottom:12px; }
+      /* ── META & KONTEN ── */
+      .meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; background: #f8f8f8; padding: 8px 12px; border-radius: 5px; font-size: 9px; }
+      .meta div { flex: 1; min-width: 130px; }
+      .meta label { font-weight: 700; color: #888; display: block; margin-bottom: 2px; font-size:8px; }
+      .rekap-grid { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+      .rekap-box { flex: 1; min-width: 110px; border: 1px solid #e0e0e0; border-radius: 7px; padding: 8px 12px; text-align: center; }
+      .rekap-box .val { font-size: 13px; font-weight: 800; color: #e84b13; }
+      .rekap-box .lbl { font-size: 8px; color: #888; margin-top: 2px; }
+      table { width: 100%; border-collapse: collapse; font-size: 9px; }
+      thead tr { background: #e84b13; color: white; }
+      th { padding: 6px 6px; text-align: left; font-weight: 600; }
+      td { padding: 5px 6px; border-bottom: 1px solid #eee; }
+      tr:nth-child(even) { background: #f9f9f9; }
+      .footer { margin-top: 18px; text-align: center; font-size: 8px; color: #aaa; border-top:1px solid #eee; padding-top:8px; }
+      @media print { @page { margin: 15mm; } }
+    </style></head><body>
+    <!-- ══ KOP SURAT FORMAL ══ -->
+    <hr class="garis-kop-atas">
+    <table class="kop-table">
+      <tr>
+        <td class="logo-icon">🚚</td>
+        <td>
+          <div class="nama-perusahaan">LOGISTIK EXPRESS</div>
+          <div class="tagline">Solusi Pengiriman Terpercaya &amp; Tepat Waktu</div>
+          <div class="alamat">
+            Jl. Raya Logistik No. 88, Gambir, Jakarta Pusat 10110<br>
+            📞 (021) 5555-1234 &nbsp;|&nbsp; ✉ info@logistikexpress.co.id &nbsp;|&nbsp; 🌐 www.logistikexpress.co.id
+          </div>
+        </td>
+        <td class="kop-right">
+          <span class="iso-badge">ISO 9001:2015</span><br>
+          <span style="font-size:7px;color:#888;display:block;margin-top:3px;">Terakreditasi &amp; Terpercaya</span>
+        </td>
+      </tr>
+    </table>
+    <hr class="garis-kop-bawah">
+    <div class="judul-dokumen">
+      <h2>LAPORAN KEUANGAN – TRANSAKSI PEMBAYARAN</h2>
+      <p>Dokumen ini diterbitkan secara resmi oleh Sistem Manajemen LogisTik Express</p>
+    </div>
+    <hr class="garis-judul">
+    <!-- ══ META INFO ══ -->
+    <div class="meta">
+      <div><label>Cabang</label>${cabangTxt}</div>
+      <div><label>Periode</label>${tglDari} s/d ${tglSampai}</div>
+      <div><label>Total Transaksi</label>${jumlahRows} transaksi</div>
+      <div><label>Dicetak</label>${now}</div>
+    </div>
+    <div class="rekap-grid">
+      <div class="rekap-box"><div class="val" style="color:#10b981;">${fmt(totalLunas)}</div><div class="lbl">Sudah Lunas</div></div>
+      <div class="rekap-box"><div class="val" style="color:#f59e0b;">${fmt(totalPending)}</div><div class="lbl">Belum Dibayar</div></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>No Resi</th><th>Pengirim</th><th>Cabang</th><th>Layanan</th>
+        <th>Tujuan</th><th>Jumlah</th><th>Metode</th><th>Status</th><th>Tanggal</th>
+      </tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999;">Tidak ada data</td></tr>'}
+      <tr style="background:#fff3e0;font-weight:bold;">
+        <td colspan="5" style="text-align:right;padding:5px 6px;border-bottom:2px solid #e84b13;">Total Biaya Keseluruhan</td>
+        <td style="padding:5px 6px;border-bottom:2px solid #e84b13;color:#e84b13;font-size:10px;">${fmt(totalLunas + totalPending)}</td>
+        <td colspan="3" style="border-bottom:2px solid #e84b13;"></td>
+      </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:32px; page-break-inside:avoid;">
+      <div style="display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+        ${ttdImg('dibuat','Dibuat Oleh','Staff Keuangan','Divisi Keuangan &amp; Akuntansi')}
+        ${ttdImg('diperiksa','Diperiksa Oleh','Manajer Keuangan','Divisi Keuangan &amp; Akuntansi')}
+        ${ttdImg('disetujui','Disetujui Oleh','Direktur Utama','LOGISTIK EXPRESS')}
+      </div>
+      <div style="margin-top:18px; padding:8px 12px; background:#f8f8f8; border-left:3px solid #e84b13; border-radius:3px; font-size:8px; color:#555;">
+        <strong>Catatan:</strong> Dokumen ini diterbitkan secara resmi oleh Sistem Manajemen LogisTik Express dan telah diverifikasi kebenarannya.
+      </div>
+    </div>
+    <div class="footer">Laporan ini dicetak otomatis oleh sistem LogisTik — ${now}</div>
+    </body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.print(); };
+  }
+</script>
+
+<!-- ══ MODAL TANDA TANGAN ══ -->
+<div id="modalTtdKeu" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:14px; padding:28px; width:90%; max-width:580px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+      <h3 style="font-size:15px; font-weight:800; color:#1a1a1a;">✍️ Upload Tanda Tangan</h3>
+      <button type="button" onclick="closeTtdModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#888; line-height:1;">✕</button>
+    </div>
+    <p style="font-size:12px; color:#666; margin-bottom:18px;">Upload gambar tanda tangan (PNG/JPG transparan direkomendasikan). Isi nama pejabat lalu pilih gambar tanda tangan.</p>
+
+    <!-- Slot: Dibuat -->
+    <div style="margin-bottom:14px; padding:14px; background:#f8f8f8; border-radius:10px;">
+      <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:#e84b13;">Dibuat Oleh — Staff Keuangan</div>
+      <input id="nama-dibuat" type="text" placeholder="Nama lengkap..." style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; margin-bottom:8px; box-sizing:border-box;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <img id="prev-dibuat" src="" style="display:none; height:48px; width:96px; object-fit:contain; border:1px solid #e5e7eb; border-radius:6px; background:#fff;">
+        <div>
+          <input id="inp-dibuat" type="file" accept="image/*" style="display:none" onchange="handleTtdUpload('dibuat', this)">
+          <button type="button" onclick="document.getElementById('inp-dibuat').click()" style="background:#e84b13; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:11px; cursor:pointer; margin-right:6px;">📎 Pilih Gambar</button>
+          <button type="button" onclick="clearTtd('dibuat')" style="background:#eee; color:#333; border:none; border-radius:6px; padding:6px 12px; font-size:11px; cursor:pointer;">🗑️ Hapus</button>
+          <span id="lbl-dibuat" style="font-size:11px; color:#888; margin-left:6px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slot: Diperiksa -->
+    <div style="margin-bottom:14px; padding:14px; background:#f8f8f8; border-radius:10px;">
+      <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:#e84b13;">Diperiksa Oleh — Manajer Keuangan</div>
+      <input id="nama-diperiksa" type="text" placeholder="Nama lengkap..." style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; margin-bottom:8px; box-sizing:border-box;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <img id="prev-diperiksa" src="" style="display:none; height:48px; width:96px; object-fit:contain; border:1px solid #e5e7eb; border-radius:6px; background:#fff;">
+        <div>
+          <input id="inp-diperiksa" type="file" accept="image/*" style="display:none" onchange="handleTtdUpload('diperiksa', this)">
+          <button type="button" onclick="document.getElementById('inp-diperiksa').click()" style="background:#e84b13; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:11px; cursor:pointer; margin-right:6px;">📎 Pilih Gambar</button>
+          <button type="button" onclick="clearTtd('diperiksa')" style="background:#eee; color:#333; border:none; border-radius:6px; padding:6px 12px; font-size:11px; cursor:pointer;">🗑️ Hapus</button>
+          <span id="lbl-diperiksa" style="font-size:11px; color:#888; margin-left:6px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slot: Disetujui -->
+    <div style="margin-bottom:20px; padding:14px; background:#f8f8f8; border-radius:10px;">
+      <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:#e84b13;">Disetujui Oleh — Direktur Utama</div>
+      <input id="nama-disetujui" type="text" placeholder="Nama lengkap..." style="width:100%; padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; margin-bottom:8px; box-sizing:border-box;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <img id="prev-disetujui" src="" style="display:none; height:48px; width:96px; object-fit:contain; border:1px solid #e5e7eb; border-radius:6px; background:#fff;">
+        <div>
+          <input id="inp-disetujui" type="file" accept="image/*" style="display:none" onchange="handleTtdUpload('disetujui', this)">
+          <button type="button" onclick="document.getElementById('inp-disetujui').click()" style="background:#e84b13; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:11px; cursor:pointer; margin-right:6px;">📎 Pilih Gambar</button>
+          <button type="button" onclick="clearTtd('disetujui')" style="background:#eee; color:#333; border:none; border-radius:6px; padding:6px 12px; font-size:11px; cursor:pointer;">🗑️ Hapus</button>
+          <span id="lbl-disetujui" style="font-size:11px; color:#888; margin-left:6px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" onclick="closeTtdModal()" style="padding:9px 20px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:13px;">Batal</button>
+      <button type="button" onclick="doExportPDFKeu()" style="padding:9px 22px; border-radius:8px; border:none; background:#e84b13; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">🖨️ Export PDF</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

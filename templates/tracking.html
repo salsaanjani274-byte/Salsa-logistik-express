@@ -5,122 +5,441 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lacak Paket – LogisTik Express</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap');
+  :root {
+    --brand:    #E84B13;
+    --brand-dk: #C03D0E;
+    --brand-lt: #FFF1EC;
+    --ink:      #0F0F1A;
+    --ink-2:    #3D3D52;
+    --ink-3:    #7B7B96;
+    --border:   #E8E8F0;
+    --surface:  #FAFAFA;
+    --white:    #FFFFFF;
+    --green:    #059669;
+    --amber:    #D97706;
+    --blue:     #2563EB;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F4F6FB; min-height: 100vh; }
-  .nav { background: #1A1A2E; padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
-  .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .nav-icon { width: 36px; height: 36px; background: #E84B13; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
-  .nav-title { color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 18px; }
-  .nav-links { display: flex; gap: 12px; }
-  .nav-links a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13.5px; padding: 7px 14px; border-radius: 8px; transition: all .2s; }
-  .nav-links a:hover { color: white; background: rgba(255,255,255,0.08); }
-  .hero { background: linear-gradient(135deg, #E84B13 0%, #C03D0E 100%); padding: 56px 28px; text-align: center; }
-  .hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 800; color: white; margin-bottom: 10px; }
-  .hero p { color: rgba(255,255,255,0.8); font-size: 15px; margin-bottom: 32px; }
-  .search-box { background: white; border-radius: 16px; padding: 8px; display: flex; gap: 8px; max-width: 560px; margin: 0 auto; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
-  .search-box input { flex: 1; border: none; padding: 12px 16px; font-size: 15px; font-family: 'Plus Jakarta Sans', sans-serif; color: #1A1A2E; outline: none; background: transparent; }
-  .search-box button { background: #E84B13; color: white; border: none; border-radius: 10px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .2s; }
-  .search-box button:hover { background: #C03D0E; }
-  .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
-  .card { background: white; border-radius: 18px; border: 1px solid #E5E7EB; overflow: hidden; margin-bottom: 20px; }
-  .card-header { padding: 18px 24px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
-  .card-header h3 { font-weight: 800; font-size: 16px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #F5F5F8;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--ink);
+    padding: 0 40px;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+  .nav-logo {
+    width: 38px; height: 38px; background: var(--brand);
+    border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 17px;
+  }
+  .nav-name {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 17px; color: white; letter-spacing: -.3px;
+  }
+  .nav-name span { color: var(--brand); }
+  .nav-right { display: flex; align-items: center; gap: 6px; }
+  .nav-link {
+    color: rgba(255,255,255,0.55); text-decoration: none;
+    font-size: 13.5px; font-weight: 500;
+    padding: 7px 15px; border-radius: 8px;
+    transition: all .18s;
+  }
+  .nav-link:hover { color: white; background: rgba(255,255,255,0.08); }
+  .nav-cta {
+    background: var(--brand); color: white;
+    text-decoration: none; font-size: 13.5px; font-weight: 600;
+    padding: 8px 18px; border-radius: 8px;
+    transition: background .18s;
+  }
+  .nav-cta:hover { background: var(--brand-dk); }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--ink);
+    padding: 72px 40px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 120%, rgba(232,75,19,0.22) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(232,75,19,0.12); border: 1px solid rgba(232,75,19,0.25);
+    color: #FF7A52; font-size: 12px; font-weight: 600;
+    letter-spacing: .8px; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 99px; margin-bottom: 22px;
+  }
+  .hero-tag i { font-size: 10px; }
+  .hero h1 {
+    font-family: 'Syne', sans-serif; font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800; color: white; line-height: 1.08;
+    letter-spacing: -.5px; margin-bottom: 14px;
+  }
+  .hero h1 span { color: var(--brand); }
+  .hero p { color: rgba(255,255,255,0.5); font-size: 15px; margin-bottom: 40px; font-weight: 300; }
+
+  /* Search */
+  .search-wrap { max-width: 580px; margin: 0 auto; position: relative; z-index: 1; }
+  .search-box {
+    background: white; border-radius: 14px;
+    display: flex; gap: 0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .search-icon {
+    width: 54px; display: flex; align-items: center; justify-content: center;
+    color: #BABAC8; font-size: 16px; flex-shrink: 0;
+  }
+  .search-box input {
+    flex: 1; border: none; padding: 18px 4px;
+    font-size: 14.5px; font-family: 'DM Sans', sans-serif;
+    color: var(--ink); outline: none;
+    font-weight: 500; letter-spacing: .2px;
+  }
+  .search-box input::placeholder { color: #BABAC8; font-weight: 400; }
+  .search-btn {
+    background: var(--brand); color: white; border: none;
+    padding: 14px 28px; font-size: 14px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: background .18s; flex-shrink: 0; margin: 6px; border-radius: 10px;
+    letter-spacing: .2px;
+  }
+  .search-btn:hover { background: var(--brand-dk); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; justify-content: center; gap: 40px;
+    margin-top: 40px; flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+    color: white; display: block;
+  }
+  .stat-lbl { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 300; }
+
+  /* ── CONTAINER ── */
+  .container { max-width: 820px; margin: 0 auto; padding: 40px 24px 64px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: white; border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    animation: fadeUp .35s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card:nth-child(2) { animation-delay: .05s; }
+  .card:nth-child(3) { animation-delay: .10s; }
+  .card:nth-child(4) { animation-delay: .15s; }
+
+  .card-header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+  }
+  .card-header-title {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .icon-orange { background: var(--brand-lt); color: var(--brand); }
+  .icon-blue   { background: rgba(37,99,235,0.08); color: var(--blue); }
+  .icon-green  { background: rgba(5,150,105,0.08); color: var(--green); }
+  .card-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); }
   .card-body { padding: 24px; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .info-item label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #9CA3AF; margin-bottom: 5px; }
-  .info-item span { font-size: 14px; font-weight: 600; color: #1A1A2E; }
-  .resi-code { font-family: 'Space Grotesk', monospace; font-weight: 700; color: #E84B13; font-size: 16px; letter-spacing: 1px; }
-  .badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-  .badge-success { background: rgba(16,185,129,0.12); color: #065F46; }
-  .badge-warning { background: rgba(245,158,11,0.12); color: #D97706; }
-  .badge-primary { background: rgba(232,75,19,0.12); color: #E84B13; }
-  .badge-info { background: rgba(59,130,246,0.12); color: #1E40AF; }
-  .badge-danger { background: rgba(239,68,68,0.12); color: #991B1B; }
-  .badge-secondary { background: rgba(107,114,128,0.12); color: #374151; }
-  .timeline { position: relative; padding-left: 32px; }
-  .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #E5E7EB; }
-  .t-item { position: relative; padding-bottom: 24px; }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .badge-success { background: rgba(5,150,105,0.1); color: #065F46; }
+  .badge-success::before { background: var(--green); }
+  .badge-warning { background: rgba(217,119,6,0.1); color: #92400E; }
+  .badge-warning::before { background: var(--amber); }
+  .badge-primary { background: rgba(232,75,19,0.1); color: var(--brand-dk); }
+  .badge-primary::before { background: var(--brand); }
+  .badge-info    { background: rgba(37,99,235,0.1); color: #1E3A8A; }
+  .badge-info::before { background: var(--blue); }
+  .badge-danger  { background: rgba(220,38,38,0.1); color: #7F1D1D; }
+  .badge-danger::before { background: #DC2626; }
+  .badge-secondary { background: rgba(107,114,128,0.1); color: #374151; }
+  .badge-secondary::before { background: #9CA3AF; }
+
+  /* ── RESI CODE ── */
+  .resi-code {
+    font-family: 'Syne', monospace; font-weight: 700;
+    color: var(--brand); font-size: 20px; letter-spacing: 1.5px;
+  }
+
+  /* ── PROGRESS STEPS ── */
+  .progress-track {
+    display: flex; align-items: flex-start;
+    margin: 8px 0 4px; position: relative;
+  }
+  .progress-track::before {
+    content: ''; position: absolute;
+    top: 18px; left: 18px; right: 18px; height: 2px;
+    background: var(--border); z-index: 0;
+  }
+  .prog-step { flex: 1; text-align: center; position: relative; z-index: 1; }
+  .prog-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--border); color: var(--ink-3);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px; font-size: 13px;
+    border: 2px solid transparent;
+    transition: all .3s;
+  }
+  .prog-circle.done {
+    background: var(--green); color: white;
+    border-color: var(--green);
+    box-shadow: 0 0 0 4px rgba(5,150,105,0.12);
+  }
+  .prog-circle.active {
+    background: var(--brand); color: white;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 4px rgba(232,75,19,0.15);
+  }
+  .prog-label { font-size: 10px; font-weight: 600; color: var(--ink-3); line-height: 1.3; }
+  .prog-label.done   { color: var(--green); }
+  .prog-label.active { color: var(--brand); }
+
+  /* ── INFO GRID ── */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 500px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-item {}
+  .info-item label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--ink-3); margin-bottom: 5px;
+  }
+  .info-item span { font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.5; }
+  .info-sep { grid-column: 1 / -1; height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* Resi row */
+  .resi-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 12px;
+  }
+  .resi-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+
+  /* ── TIMELINE ── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 8px; top: 6px; bottom: 6px;
+    width: 1.5px; background: var(--border);
+  }
+  .t-item { position: relative; padding-bottom: 28px; }
   .t-item:last-child { padding-bottom: 0; }
-  .t-dot { position: absolute; left: -26px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #E84B13; border: 2.5px solid white; box-shadow: 0 0 0 2.5px #E84B13; }
-  .t-dot.done { background: #10B981; box-shadow: 0 0 0 2.5px #10B981; }
-  .t-time { font-size: 11.5px; color: #9CA3AF; margin-bottom: 3px; }
-  .t-status { font-weight: 700; font-size: 14px; color: #1A1A2E; }
-  .t-loc { font-size: 12.5px; color: #6B7280; margin-top: 3px; }
-  .t-desc { font-size: 12.5px; color: #9CA3AF; margin-top: 3px; }
-  .empty { text-align: center; padding: 60px 24px; color: #6B7280; }
-  .empty i { font-size: 52px; opacity: .2; display: block; margin-bottom: 16px; }
-  .not-found { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 14px; padding: 32px; text-align: center; }
-  .progress-bar { display: flex; gap: 0; margin: 20px 0; }
-  .prog-step { flex: 1; text-align: center; position: relative; }
-  .prog-step::before { content: ''; position: absolute; top: 16px; left: 50%; right: -50%; height: 3px; background: #E5E7EB; z-index: 0; }
-  .prog-step:last-child::before { display: none; }
-  .prog-circle { width: 34px; height: 34px; border-radius: 50%; background: #E5E7EB; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 14px; position: relative; z-index: 1; transition: all .3s; }
-  .prog-circle.active { background: #E84B13; color: white; }
-  .prog-circle.done { background: #10B981; color: white; }
-  .prog-label { font-size: 10px; font-weight: 600; color: #9CA3AF; }
-  .prog-label.active, .prog-label.done { color: #374151; }
+  .t-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .t-dot.current {
+    background: var(--brand); border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(232,75,19,0.15);
+  }
+  .t-dot.done {
+    background: var(--green); border-color: var(--green);
+  }
+  .t-dot i { font-size: 7px; color: white; }
+  .t-time  { font-size: 11.5px; color: var(--ink-3); margin-bottom: 4px; }
+  .t-status { font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 4px; }
+  .t-loc {
+    font-size: 12px; color: var(--ink-3);
+    display: flex; align-items: center; gap: 5px; margin-bottom: 3px;
+  }
+  .t-loc i { color: var(--brand); font-size: 10px; }
+  .t-desc { font-size: 12px; color: var(--ink-3); font-style: italic; }
+
+  /* ── NOT FOUND ── */
+  .not-found {
+    background: white; border: 1px solid var(--border);
+    border-radius: 16px; padding: 56px 32px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    animation: fadeUp .35s ease both;
+  }
+  .not-found-icon {
+    width: 72px; height: 72px; background: rgba(232,75,19,0.08);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; font-size: 28px; color: var(--brand);
+  }
+  .not-found h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+  .not-found p { color: var(--ink-3); font-size: 14px; line-height: 1.6; }
+  .resi-highlight { color: var(--brand); font-weight: 700; font-family: 'Syne', monospace; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 64px 24px;
+    animation: fadeUp .4s ease both;
+  }
+  .empty-icon {
+    font-size: 64px; margin-bottom: 20px; display: block;
+    filter: grayscale(1); opacity: .3;
+  }
+  .empty-state h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 10px; }
+  .empty-state p { color: var(--ink-3); font-size: 14px; max-width: 320px; margin: 0 auto; }
+
+  /* ── HOW-IT-WORKS (empty state) ── */
+  .how-steps {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+    max-width: 600px; margin: 40px auto 0;
+  }
+  @media (max-width: 500px) { .how-steps { grid-template-columns: 1fr; } }
+  .how-step {
+    background: white; border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 16px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .how-step-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--brand-lt); color: var(--brand);
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .how-step h4 { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+  .how-step p  { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--ink); color: rgba(255,255,255,0.4);
+    text-align: center; padding: 28px 24px;
+    font-size: 13px;
+  }
+  .footer strong { color: rgba(255,255,255,0.7); }
 </style>
 </head>
 <body>
+
+
 <nav class="nav">
   <a href="/" class="nav-brand">
-    <div class="nav-icon"><i class="fas fa-truck-fast"></i></div>
-    <span class="nav-title">LogisTik Express</span>
+    <div class="nav-logo"><i class="fas fa-truck-fast"></i></div>
+    <span class="nav-name">Logis<span>Tik</span> Express</span>
   </a>
-  <div class="nav-links">
-    {% if session.user_id %}
-    <a href="/dashboard">Dashboard</a>
-    <a href="/logout">Logout</a>
-    {% else %}
-    <a href="/login">Login</a>
-    <a href="/register">Daftar</a>
-    {% endif %}
+  <div class="nav-right">
+    <a href="/login" class="nav-cta">Portal Staf →</a>
   </div>
 </nav>
 
 <div class="hero">
-  <h1>🔍 Lacak Paket Anda</h1>
-  <p>Masukkan nomor resi untuk melihat status pengiriman real-time</p>
-  <form method="POST">
+  <div class="hero-tag"><i class="fas fa-circle-dot"></i> Lacak pengiriman real-time</div>
+  <h1>Di mana paket<br><span>Anda sekarang?</span></h1>
+  <p>Masukkan nomor resi untuk melihat status pengiriman secara langsung</p>
+
+  <form method="POST" class="search-wrap">
     <div class="search-box">
-      <input type="text" name="no_resi" placeholder="Contoh: LGSJKT2412151234" 
-             value="{{ no_resi }}" autocomplete="off">
-      <button type="submit"><i class="fas fa-search"></i> Lacak</button>
+      <div class="search-icon"><i class="fas fa-barcode"></i></div>
+      <input type="text" name="no_resi" placeholder="Contoh: LGSJKT2412151234"
+             value="{{ no_resi }}" autocomplete="off" spellcheck="false">
+      <button class="search-btn" type="submit">
+        <i class="fas fa-search"></i> Lacak
+      </button>
     </div>
   </form>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-num">10+</span>
+      <span class="stat-lbl">Kota di Pulau Jawa terjangkau</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">24 Jam</span>
+      <span class="stat-lbl">Update status</span>
+    </div>
+  </div>
 </div>
 
 <div class="container">
+
   {% if no_resi and not paket %}
   <div class="not-found">
-    <i class="fas fa-search" style="font-size:48px;color:#E84B13;opacity:.4;display:block;margin-bottom:16px;"></i>
-    <div style="font-weight:800;font-size:18px;color:#1A1A2E;margin-bottom:8px;">Resi Tidak Ditemukan</div>
-    <div style="color:#6B7280;">Nomor resi <strong style="color:#E84B13;">{{ no_resi }}</strong> tidak ditemukan dalam sistem kami.</div>
-    <div style="color:#9CA3AF;font-size:13px;margin-top:8px;">Pastikan nomor resi benar dan sudah terdaftar.</div>
+    <div class="not-found-icon"><i class="fas fa-search"></i></div>
+    <h2>Resi Tidak Ditemukan</h2>
+    <p>Nomor resi <span class="resi-highlight">{{ no_resi }}</span> tidak ditemukan dalam sistem kami.<br>
+    Pastikan nomor resi benar atau hubungi cabang pengiriman.</p>
   </div>
   {% endif %}
 
   {% if paket %}
-  <!-- STATUS PROGRESS -->
   {% set status_order = ['created','sorting_origin','in_transit_gateway','gateway_processing','on_transit','arrived_destination','out_for_delivery','delivered'] %}
   {% set cur_idx = status_order.index(paket.status) if paket.status in status_order else 0 %}
+
   <div class="card">
     <div class="card-header">
-      <h3>📦 Status Pengiriman</h3>
-      {% set s = {'created':('Paket Dibuat','secondary'),'sorting_origin':('Sorting Asal','warning'),'in_transit_gateway':('Menuju Gateway','info'),'gateway_processing':('Gateway','info'),'on_transit':('Dalam Perjalanan','warning'),'arrived_destination':('Di Cabang Tujuan','primary'),'out_for_delivery':('Sedang Diantar','primary'),'delivered':('Terkirim ✓','success'),'returned':('Dikembalikan','danger'),'problem':('Bermasalah','danger')} %}
-      {% set si = s.get(paket.status, (paket.status, 'secondary')) %}
-      <span class="badge badge-{{ si[1] }}" style="font-size:13px;padding:7px 14px;">{{ si[0] }}</span>
+      <div class="card-header-title">
+        <div class="card-header-icon icon-orange"><i class="fas fa-route"></i></div>
+        <h3>Status Pengiriman</h3>
+      </div>
+      {% set s = {
+        'created':('Paket Dibuat','secondary'),
+        'sorting_origin':('Sorting Asal','warning'),
+        'in_transit_gateway':('Menuju Gateway','info'),
+        'gateway_processing':('Di Gateway','info'),
+        'on_transit':('Dalam Perjalanan','warning'),
+        'arrived_destination':('Di Cabang Tujuan','primary'),
+        'out_for_delivery':('Sedang Diantar','primary'),
+        'delivered':('Terkirim','success'),
+        'returned':('Dikembalikan','danger'),
+        'problem':('Bermasalah','danger')
+      } %}
+      {% set si = s.get(paket.status, (paket.status,'secondary')) %}
+      <span class="badge badge-{{ si[1] }}" style="font-size:12.5px;padding:7px 14px;">{{ si[0] }}</span>
     </div>
     <div class="card-body">
-      <div class="progress-bar">
-        {% set steps = [('📦','Dibuat'),('🔄','Sorting'),('🚚','Gateway'),('✈️','Transit'),('🏢','Cabang'),('🏠','Diantar'),('✅','Selesai')] %}
-        {% set prog_map = [0,1,2,3,4,5,6] %}
+      <div class="progress-track">
+        {# Steps harus sinkron 1:1 dengan status_order (8 item) #}
+        {% set steps = [
+          ('fas fa-box',             'Dibuat'),
+          ('fas fa-sort-amount-down','Sorting'),
+          ('fas fa-warehouse',       'Gateway'),
+          ('fas fa-cogs',            'Proses'),
+          ('fas fa-road',            'Transit'),
+          ('fas fa-building',        'Cabang'),
+          ('fas fa-motorcycle',      'Diantar'),
+          ('fas fa-check',           'Selesai')
+        ] %}
         {% for icon, label in steps %}
         {% set idx = loop.index0 %}
         <div class="prog-step">
-          <div class="prog-circle {{ 'done' if cur_idx > idx else ('active' if cur_idx == idx else '') }}">{{ icon }}</div>
+          <div class="prog-circle {{ 'done' if cur_idx > idx else ('active' if cur_idx == idx else '') }}">
+            <i class="{{ icon }}"></i>
+          </div>
           <div class="prog-label {{ 'done' if cur_idx > idx else ('active' if cur_idx == idx else '') }}">{{ label }}</div>
         </div>
         {% endfor %}
@@ -128,14 +447,125 @@
     </div>
   </div>
 
-  <!-- INFO PAKET -->
   <div class="card">
-    <div class="card-header"><h3>📋 Detail Paket</h3></div>
+    <div class="card-header">
+      <div class="card-header-title">
+        <div class="card-header-icon icon-blue"><i class="fas fa-map-location-dot"></i></div>
+        <h3>Posisi Paket di Peta</h3>
+      </div>
+      {% set si = s.get(paket.status, (paket.status,'secondary')) %}
+      <span class="badge badge-{{ si[1] }}" style="font-size:12px;padding:6px 13px;">
+        {% set status_emoji = {
+          'created':'📦',
+          'sorting_origin':'🔀',
+          'in_transit_gateway':'🚚',
+          'gateway_origin':'🏭',
+          'on_transit':'🛣️',
+          'arrived_gateway_dest':'📍',
+          'out_for_delivery':'🏍️',
+          'delivered':'✅',
+          'failed_delivery':'❌',
+          'on_hold':'⏸️',
+          'return_process':'🔄',
+          'returned':'↩️',
+          'problem':'⚠️'
+        } %}
+        {{ status_emoji.get(paket.status, '📦') }} {{ si[0] }}
+      </span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div id="trackingMap" style="height:360px;width:100%;background:#f0f4f8;"></div>
+
+      <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-3);margin-bottom:10px;">Keterangan Peta</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;">
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#3B82F6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">🏬</span> Kota Asal
+          </span>
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#EF4444;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">🏠</span> Kota Tujuan
+          </span>
+          {% if paket.status in ['created','sorting_origin'] %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#8B5CF6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">📦</span> Paket Dibuat / Sortir
+          </span>
+          {% elif paket.status in ['in_transit_gateway','gateway_origin','arrived_gateway_dest','on_hold'] %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#F59E0B;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">🏭</span> Di Gateway / Hub
+          </span>
+          {% elif paket.status in ['on_transit','out_for_delivery','return_process'] %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#E84B13;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">🚚</span> Sedang Bergerak
+          </span>
+          {% elif paket.status == 'delivered' %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#10B981;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">✅</span> Terkirim
+          </span>
+          {% elif paket.status in ['failed_delivery','returned','problem'] %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#6B7280;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.25);text-align:center;line-height:22px;font-size:13px;">⚠️</span> Bermasalah / Retur
+          </span>
+          {% endif %}
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:36px;height:4px;background:#E84B13;border-radius:2px;vertical-align:middle;"></span> Rute Sudah Dilalui
+          </span>
+          <span style="font-size:12px;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:36px;height:4px;background:#9CA3AF;border-radius:2px;border-top:2px dashed #9CA3AF;vertical-align:middle;"></span> Rute Sisa
+          </span>
+        </div>
+
+        <div style="margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+          <div style="background:var(--brand);color:white;font-size:11px;font-weight:700;padding:8px 14px;letter-spacing:.6px;text-transform:uppercase;">
+            🗺️ Panduan Status Paket
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;">
+            {% set all_statuses = [
+              ('created',              '📦', 'Paket Dibuat',                'secondary'),
+              ('sorting_origin',       '🔀', 'Sortir di Cabang Asal',       'warning'),
+              ('in_transit_gateway',   '🚚', 'Dikirim ke Gateway Asal',     'info'),
+              ('gateway_origin',       '🏭', 'Proses di Gateway Asal',      'info'),
+              ('on_transit',           '🛣️', 'Dalam Perjalanan Antar Kota', 'warning'),
+              ('arrived_gateway_dest', '📍', 'Tiba di Gateway Tujuan',      'success'),
+              ('out_for_delivery',     '🏍️', 'Sedang Diantar Kurir',       'primary'),
+              ('delivered',            '✅', 'Terkirim (POD)',               'success'),
+              ('failed_delivery',      '❌', 'Gagal Antar',                 'danger'),
+              ('on_hold',              '⏸️', 'Ditahan (Hold)',               'warning'),
+              ('return_process',       '🔄', 'Proses Retur',                'warning'),
+              ('returned',             '↩️', 'Dikembalikan',                'danger'),
+              ('problem',              '⚠️', 'Bermasalah',                  'danger')
+            ] %}
+            {% for key, emoji, label, color in all_statuses %}
+            <div style="padding:8px 14px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+                        display:flex;align-items:center;gap:8px;
+                        {% if paket.status == key %}background:var(--brand-lt);font-weight:700;{% endif %}">
+              <span style="font-size:16px;line-height:1;">{{ emoji }}</span>
+              <span style="font-size:12px;color:{% if paket.status == key %}var(--brand){% else %}var(--ink-2){% endif %};">{{ label }}</span>
+              {% if paket.status == key %}
+              <span style="margin-left:auto;font-size:9px;background:var(--brand);color:white;padding:2px 6px;border-radius:99px;white-space:nowrap;">● Saat ini</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-title">
+        <div class="card-header-icon icon-blue"><i class="fas fa-file-lines"></i></div>
+        <h3>Detail Paket</h3>
+      </div>
+    </div>
     <div class="card-body">
-      <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #F3F4F6;">
-        <div style="font-size:12px;color:#9CA3AF;margin-bottom:4px;">No. Resi</div>
-        <div class="resi-code">{{ paket.no_resi }}</div>
-        <div style="font-size:12px;color:#6B7280;margin-top:4px;">Layanan: {{ paket.layanan_kode }} – {{ paket.layanan_nama }}</div>
+      <div class="resi-row">
+        <div>
+          <div class="resi-code">{{ paket.no_resi }}</div>
+          <div class="resi-sub">{{ paket.layanan_kode }} – {{ paket.layanan_nama }}</div>
+        </div>
+        {% set si = s.get(paket.status, (paket.status,'secondary')) %}
+        <span class="badge badge-{{ si[1] }}">{{ si[0] }}</span>
       </div>
       <div class="info-grid">
         <div class="info-item">
@@ -144,7 +574,9 @@
         </div>
         <div class="info-item">
           <label>Penerima</label>
-          <span>{{ paket.nama_penerima }}<br><span style="font-weight:400;font-size:12px;color:#6B7280;">{{ paket.no_hp_penerima }}</span></span>
+          <span>{{ paket.nama_penerima }}<br>
+            <span style="font-size:12px;color:var(--ink-3);font-weight:400;">{{ paket.no_hp_penerima }}</span>
+          </span>
         </div>
         <div class="info-item">
           <label>Kota Asal</label>
@@ -160,7 +592,7 @@
         </div>
         <div class="info-item">
           <label>Total Biaya</label>
-          <span style="color:#E84B13;">Rp{{ "{:,.0f}".format(paket.total_biaya|float) }}</span>
+          <span style="color:var(--brand);font-weight:700;font-size:16px;">Rp{{ "{:,.0f}".format(paket.total_biaya|float) }}</span>
         </div>
         {% if paket.isi_paket %}
         <div class="info-item">
@@ -169,36 +601,76 @@
         </div>
         {% endif %}
         {% if paket.pod_penerima %}
-        <div class="info-item">
-          <label>Diterima oleh</label>
-          <span style="color:#10B981;">{{ paket.pod_penerima }} ✓</span>
+        <div class="info-sep"></div>
+        <div class="info-item" style="grid-column:1/-1;">
+          <label>Diterima Oleh</label>
+          <span style="color:var(--green);display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-circle-check"></i> {{ paket.pod_penerima }}
+          </span>
         </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- TIMELINE TRACKING -->
   <div class="card">
-    <div class="card-header"><h3>🗺️ Riwayat Perjalanan Paket</h3></div>
+    <div class="card-header">
+      <div class="card-header-title">
+        <div class="card-header-icon icon-green"><i class="fas fa-timeline"></i></div>
+        <h3>Riwayat Perjalanan</h3>
+      </div>
+      {% if riwayat %}
+      <span style="font-size:12px;color:var(--ink-3);">{{ riwayat|length }} pembaruan</span>
+      {% endif %}
+    </div>
     <div class="card-body">
       {% if riwayat %}
       <div class="timeline">
+        {% set sl = {
+          'created':               'Paket Dibuat',
+          'sorting_origin':        'Sorting di Cabang Asal',
+          'in_transit_gateway':    'Dikirim ke Gateway Asal',
+          'gateway_origin':        'Proses di Gateway Asal',
+          'gateway_processing':    'Proses di Gateway',
+          'on_transit':            'Dalam Perjalanan Antar Kota',
+          'arrived_gateway_dest':  'Tiba di Gateway Tujuan',
+          'arrived_destination':   'Tiba di Cabang Tujuan',
+          'out_for_delivery':      'Sedang Diantar Kurir',
+          'delivered':             'Paket Terkirim',
+          'failed_delivery':       'Gagal Diantar',
+          'on_hold':               'Paket Ditahan',
+          'return_process':        'Proses Pengembalian',
+          'returned':              'Dikembalikan ke Pengirim',
+          'problem':               'Paket Bermasalah'
+        } %}
         {% for r in riwayat|reverse %}
-        {% set is_last = loop.first %}
+        {% set is_first = loop.first %}
         <div class="t-item">
-          <div class="t-dot {{ 'done' if not is_last else '' }}"></div>
-          <div class="t-time">{{ r.created_at.strftime('%d %b %Y, %H:%M') if r.created_at else '-' }} · {{ r.petugas }}</div>
-          {% set sl = {'created':('Paket Dibuat',''),'sorting_origin':('Sorting Cabang Asal',''),'in_transit_gateway':('Dikirim ke Gateway',''),'gateway_processing':('Proses di Gateway',''),'on_transit':('Dalam Perjalanan Antar Kota',''),'arrived_destination':('Tiba di Cabang Tujuan',''),'out_for_delivery':('Sedang Diantar Kurir',''),'delivered':('Paket Terkirim ✅',''),'returned':('Dikembalikan',''),'problem':('Bermasalah','')} %}
-          <div class="t-status">{{ sl.get(r.status, (r.status,''))[0] }}</div>
-          {% if r.lokasi %}<div class="t-loc"><i class="fas fa-map-marker-alt" style="color:#E84B13;font-size:11px;"></i> {{ r.lokasi }}</div>{% endif %}
-          {% if r.keterangan %}<div class="t-desc">{{ r.keterangan }}</div>{% endif %}
+          <div class="t-dot {{ 'current' if is_first else 'done' }}">
+            {% if is_first %}
+            <i class="fas fa-circle" style="font-size:5px;"></i>
+            {% else %}
+            <i class="fas fa-check" style="font-size:7px;"></i>
+            {% endif %}
+          </div>
+          <div class="t-time">
+            {{ r.created_at.strftime('%d %b %Y · %H:%M') if r.created_at else '-' }}
+            &nbsp;·&nbsp; {{ r.petugas }}
+          </div>
+          <div class="t-status">{{ sl.get(r.status, r.status) }}</div>
+          {% if r.lokasi %}
+          <div class="t-loc"><i class="fas fa-location-dot"></i> {{ r.lokasi }}</div>
+          {% endif %}
+          
+          {% if r.keterangan %}
+          <div class="t-desc">{{ r.keterangan }}</div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
       {% else %}
-      <div class="empty">
-        <i class="fas fa-route"></i>
+      <div style="text-align:center;padding:32px;color:var(--ink-3);">
+        <i class="fas fa-route" style="font-size:36px;opacity:.2;display:block;margin-bottom:14px;"></i>
         Belum ada riwayat perjalanan
       </div>
       {% endif %}
@@ -207,12 +679,184 @@
   {% endif %}
 
   {% if not no_resi %}
-  <div style="text-align:center;padding:40px;">
-    <div style="font-size:56px;margin-bottom:16px;">📦</div>
-    <div style="font-weight:700;font-size:18px;color:#1A1A2E;margin-bottom:8px;">Lacak Paket Anda</div>
-    <div style="color:#6B7280;font-size:14px;">Masukkan nomor resi pengiriman di kolom pencarian di atas</div>
+  <div class="empty-state">
+    <span class="empty-icon">📦</span>
+    <h2>Siap Melacak Paket Anda</h2>
+    <p>Masukkan nomor resi pengiriman di kolom pencarian di atas untuk melihat status real-time.</p>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-num">1</div>
+        <h4>Masukkan Resi</h4>
+        <p>Ketik nomor resi yang tertera di struk pengiriman</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">2</div>
+        <h4>Klik Lacak</h4>
+        <p>Sistem langsung menampilkan posisi paket Anda</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">3</div>
+        <h4>Pantau Status</h4>
+        <p>Lihat riwayat perjalanan lengkap secara detail</p>
+      </div>
+    </div>
   </div>
   {% endif %}
+
 </div>
+
+
+<footer class="footer">
+  © 2025 <strong>LogisTik Express</strong> — Solusi Pengiriman Terpercaya & Tepat Waktu
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if paket %}
+<script>
+(function() {
+  var kotaAsal   = {{ paket.kota_asal | tojson }};
+  var kotaTujuan = {{ paket.kota_tujuan | tojson }};
+  var status     = {{ paket.status | tojson }};
+
+  function makeIcon(emoji, bg, ring, size) {
+    size = size || 32;
+    return L.divIcon({
+      html: '<div style="background:'+bg+';color:white;border-radius:50%;width:'+size+'px;height:'+size+'px;'+
+            'display:flex;align-items:center;justify-content:center;font-size:'+(size*0.45)+'px;'+
+            'border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3),0 0 0 4px '+ring+';line-height:1;">'+emoji+'</div>',
+      className:'', iconAnchor:[size/2, size/2]
+    });
+  }
+  // buat dari nama kota jadi lat & long
+  function geocode(query, cb) {
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
+          encodeURIComponent(query + ', Jawa, Indonesia') + '&limit=1')
+      .then(function(r){ return r.json(); })
+      .then(function(d){ cb(d && d.length ? [parseFloat(d[0].lat), parseFloat(d[0].lon)] : null); })
+      .catch(function(){ cb(null); });
+  }
+
+  // Hitung panjang total segmen koordinat (jarak jalan raya)
+  function totalLength(coords) {
+    var len = 0;
+    for (var i = 1; i < coords.length; i++) {
+      var dx = coords[i][0] - coords[i-1][0];
+      var dy = coords[i][1] - coords[i-1][1];
+      len += Math.sqrt(dx*dx + dy*dy);
+    }
+    return len;
+  }
+
+  // Ambil titik pada rute berdasarkan rasio (0.0 = asal, 1.0 = tujuan)
+  // inti nya nentuin posisi paket
+  function splitRouteByRatio(coords, ratio) {
+    if (ratio <= 0) return { point: coords[0], passedCoords: [coords[0]], remainCoords: coords };
+    if (ratio >= 1) return { point: coords[coords.length-1], passedCoords: coords, remainCoords: [coords[coords.length-1]] };
+
+    var total  = totalLength(coords);
+    var target = total * ratio;
+    var accum  = 0;
+
+    for (var i = 1; i < coords.length; i++) {
+      var dx   = coords[i][0] - coords[i-1][0];
+      var dy   = coords[i][1] - coords[i-1][1];
+      var seg  = Math.sqrt(dx*dx + dy*dy);
+      if (accum + seg >= target) {
+        var t   = (target - accum) / seg;
+        var pt  = [
+          coords[i-1][0] + t * dx,
+          coords[i-1][1] + t * dy
+        ];
+        var passed = coords.slice(0, i).concat([pt]);
+        var remain = [pt].concat(coords.slice(i));
+        return { point: pt, passedCoords: passed, remainCoords: remain };
+      }
+      accum += seg;
+    }
+    return { point: coords[coords.length-1], passedCoords: coords, remainCoords: [coords[coords.length-1]] };
+  }
+
+  // Ambil rute jalan dari OSRM,  (ngambil rute jalan aseli)
+  async function fetchRoute(from, to) {
+    var coords = from[1]+','+from[0]+';'+to[1]+','+to[0];
+    var url = 'https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson';
+    try {
+      var res  = await fetch(url);
+      var data = await res.json();
+      if (data.code === 'Ok' && data.routes.length) {
+        // GeoJSON coords: [lon, lat] → ubah ke [lat, lon]
+        return data.routes[0].geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
+      }
+    } catch(e){}
+    // Fallback: garis lurus jika OSRM gagal
+    return [from, to];
+  }
+
+  var mapEl = document.getElementById('trackingMap');
+  if (!mapEl) return;
+
+  var map = L.map('trackingMap', {zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'Map data © OpenStreetMap', maxZoom:18
+  }).addTo(map);
+
+  // ── Ambil konfigurasi STATUS_MAP dari Python (app.py /api/map-config) ──
+  fetch('/api/map-config')
+    .then(function(r){ return r.json(); })
+    .then(async function(cfg) {
+      var STATUS_MAP = cfg.status_map;
+
+      geocode(kotaAsal, async function(ptAsal) {
+        geocode(kotaTujuan, async function(ptTujuan) {
+          ptAsal   = ptAsal   || [-6.2088, 106.8456]; //koor jakarta
+          ptTujuan = ptTujuan || [-7.2575, 112.7521]; //koor surabaya
+
+          var info  = STATUS_MAP[status] || {emoji:'📦', bg:'#E84B13', ring:'rgba(232,75,19,.3)', label:'Posisi Paket', ratio:0.5};
+          var ratio = (info.ratio !== undefined ? info.ratio : 0.5);
+
+          // ── Ambil rute jalan lengkap dari OSRM ──
+          var routeCoords = await fetchRoute(ptAsal, ptTujuan);
+
+          // ── Pecah rute berdasarkan rasio status ──
+          var split      = splitRouteByRatio(routeCoords, ratio);
+          var ptPaket    = split.point;   // [lat, lon]
+          var passedCoords = split.passedCoords;
+          var remainCoords = split.remainCoords;
+
+          // ── Marker ──
+          var mkAsal   = makeIcon('🏬','#3B82F6','rgba(59,130,246,.3)',34);
+          var mkTujuan = makeIcon('🏠','#EF4444','rgba(239,68,68,.3)',34);
+          var mkPaket  = makeIcon(info.emoji, info.bg, info.ring, 36);
+
+          L.marker(ptAsal, {icon:mkAsal})
+           .addTo(map)
+           .bindPopup('<div style="text-align:center;font-size:13px;">🏬 <b>Asal</b><br><span style="color:#3B82F6;">'+kotaAsal+'</span></div>');
+
+          L.marker(ptTujuan, {icon:mkTujuan})
+           .addTo(map)
+           .bindPopup('<div style="text-align:center;font-size:13px;">🏠 <b>Tujuan</b><br><span style="color:#EF4444;">'+kotaTujuan+'</span></div>');
+
+          L.marker(ptPaket, {icon:mkPaket})
+           .addTo(map)
+           .bindPopup('<div style="text-align:center;font-size:13px;">'+info.emoji+' <b>'+info.label+'</b><br>'+
+                      '<span style="color:#6B7280;font-size:11px;">Posisi estimasi saat ini</span></div>')
+           .openPopup();
+
+          // ── Gambar rute mengikuti jalan ──
+          if (ratio > 0 && passedCoords.length > 1) {
+            L.polyline(passedCoords, {color:'#E84B13', weight:5, opacity:0.9}).addTo(map);
+          }
+          if (ratio < 1 && remainCoords.length > 1) {
+            L.polyline(remainCoords, {color:'#9CA3AF', weight:5, opacity:0.55, dashArray:'8,6'}).addTo(map);
+          }
+
+          map.fitBounds(L.latLngBounds([ptAsal, ptTujuan, ptPaket]), {padding:[50,50]});
+        });
+      });
+    });
+})();
+</script>
+{% endif %}
+
 </body>
 </html>

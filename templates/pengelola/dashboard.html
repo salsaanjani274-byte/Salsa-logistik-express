@@ -6,14 +6,17 @@
 <div class="nav-section">Menu Utama</div>
 <a href="/pengelola" class="nav-item active"><i class="fas fa-chart-pie"></i> Dashboard</a>
 <a href="/pengelola/laporan" class="nav-item"><i class="fas fa-file-alt"></i> Laporan Paket</a>
+<a href="/pengelola/keuangan" class="nav-item"><i class="fas fa-chart-line"></i> Laporan Keuangan</a>
 <a href="/pengelola/keterlambatan" class="nav-item"><i class="fas fa-exclamation-triangle"></i> Keterlambatan</a>
 <div class="nav-section">Manajemen</div>
+<a href="#" class="nav-item" onclick="openModal('modalTambahCabang')"><i class="fas fa-building"></i> Tambah Cabang</a>
 <a href="#" class="nav-item" onclick="openModal('modalTambahUser')"><i class="fas fa-user-plus"></i> Tambah User</a>
-<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+<a href="/tracking" target="_blank" rel="noopener noreferrer" class="nav-item">
+  <i class="fas fa-search-location"></i> Lacak Paket
+</a>
 {% endblock %}
 
 {% block content %}
-<!-- STATS -->
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-icon orange"><i class="fas fa-box"></i></div>
@@ -37,13 +40,6 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
-    <div class="stat-info">
-      <div class="stat-val">{{ total_pelanggan }}</div>
-      <div class="stat-label">Pelanggan</div>
-    </div>
-  </div>
-  <div class="stat-card">
     <div class="stat-icon orange"><i class="fas fa-motorcycle"></i></div>
     <div class="stat-info">
       <div class="stat-val">{{ total_kurir }}</div>
@@ -51,23 +47,37 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="stat-icon green"><i class="fas fa-coins"></i></div>
     <div class="stat-info">
-      <div class="stat-val">{{ "Rp{:,.0f}".format(total_rev|float) }}</div>
-      <div class="stat-label">Total Revenue</div>
+      <div class="stat-val">Rp{{ "{:,.0f}".format(total_payment_bulan|float) }}</div>
+      <div class="stat-label">Pendapatan Bulan Ini</div>
     </div>
-  </div><div class="stat-card">
-  <div class="stat-icon" style="background:rgba(239,68,68,0.1);">
-    <i class="fas fa-exclamation-triangle" style="color:#EF4444;"></i>
   </div>
-  <div class="stat-info">
-    <div class="stat-val" style="color:#EF4444;">{{ total_terlambat }}</div>
-    <div class="stat-label">Paket Terlambat</div>
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(total_rev|float) }}</div>
+      <div class="stat-label">Total Omset</div>
+    </div>
   </div>
-</div>
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">{{ payment_pending }}</div>
+      <div class="stat-label">Pembayaran Pending</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,0.1);">
+      <i class="fas fa-exclamation-triangle" style="color:#EF4444;"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-val" style="color:#EF4444;">{{ total_terlambat }}</div>
+      <div class="stat-label">Paket Terlambat</div>
+    </div>
+  </div>
 </div>
 
-<!-- PAKET TERBARU -->
 <div class="card" style="margin-bottom:24px;">
   <div class="card-header">
     <h5><i class="fas fa-box-open" style="color:var(--primary);margin-right:8px;"></i>Paket Terbaru</h5>
@@ -77,7 +87,7 @@
     <table>
       <thead><tr>
         <th>No Resi</th><th>Pengirim</th><th>Tujuan</th>
-        <th>Layanan</th><th>Berat</th><th>Total</th><th>Status</th>
+        <th>Layanan</th><th>Berat</th><th>Total</th><th>Status</th><th>Aksi</th>
       </tr></thead>
       <tbody>
       {% for p in pakets %}
@@ -92,21 +102,27 @@
           {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
           <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
         </td>
+        <td>
+          <button class="btn btn-sm" style="background:#10B981;color:white;"
+            onclick="openTrackingModal('{{ p.no_resi }}', '{{ p.kota_asal }}', '{{ p.kota_tujuan }}', '{{ p.status }}')"
+            title="Tracking Shipment">
+            <i class="fas fa-map-marked-alt"></i> Tracking
+          </button>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" style="text-align:center;color:#6B7280;padding:30px;">Belum ada paket</td></tr>
+      <tr><td colspan="8" style="text-align:center;color:#6B7280;padding:30px;">Belum ada paket</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- CABANG & USER -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
   <div class="card">
     <div class="card-header">
       <h5><i class="fas fa-building" style="color:var(--primary);margin-right:8px;"></i>Daftar Cabang</h5>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modalTambahUser')"><i class="fas fa-plus"></i> Tambah</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalTambahCabang')"><i class="fas fa-plus"></i> Tambah</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -175,7 +191,6 @@
   </div>
 </div>
 
-<!--TAMBAH USER -->
 <div class="modal-overlay" id="modalTambahUser">
   <div class="modal-box">
     <div class="modal-header">
@@ -186,6 +201,11 @@
       <div class="form-group">
         <label class="form-label">Nama Lengkap</label>
         <input class="form-control" name="nama" required placeholder="Nama lengkap">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username <small style="color:#6B7280;font-weight:400;">(untuk login, boleh huruf/angka/titik/underscore)</small></label>
+        <input class="form-control" name="username" required placeholder="contoh: admin.jkt atau kurir01"
+               pattern="[a-zA-Z0-9._]{3,50}" title="Min 3 karakter, hanya huruf, angka, titik, underscore">
       </div>
       <div class="grid-2">
         <div class="form-group">
@@ -207,7 +227,8 @@
           <select class="form-control" name="role" required>
             <option value="admin_cabang">Admin Cabang</option>
             <option value="kurir">Kurir</option>
-            <option value="pelanggan">Pelanggan</option>
+            <option value="driver">Driver Antar Kota</option>
+            <!-- Pelanggan tidak menggunakan sistem internal -->
             <option value="pengelola">Pengelola</option>
           </select>
         </div>
@@ -227,4 +248,256 @@
     </form>
   </div>
 </div>
+
+<div class="modal-overlay" id="modalTambahCabang">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-building" style="color:var(--primary);margin-right:8px;"></i>Tambah Cabang Baru</h4>
+      <button class="modal-close" onclick="closeModal('modalTambahCabang')">✕</button>
+    </div>
+    <form method="POST" action="/pengelola/cabang/tambah">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Kode Cabang</label>
+          <input class="form-control" name="kode_cabang" required placeholder="Contoh: JKT, SBY" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Cabang</label>
+          <input class="form-control" name="nama_cabang" required placeholder="Contoh: Cabang Jakarta Pusat">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Kota</label>
+          <input class="form-control" name="kota" required placeholder="Contoh: Jakarta">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Provinsi</label>
+          <input class="form-control" name="provinsi" required placeholder="Contoh: DKI Jakarta">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap</label>
+        <input class="form-control" name="alamat" required placeholder="Jl. ...">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">No. Telepon</label>
+          <input class="form-control" name="no_telp" placeholder="021xxxxxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipe Cabang</label>
+          <select class="form-control" name="tipe" required>
+            <option value="cabang">Cabang</option>
+            <option value="gateway">Gateway</option>
+            <option value="pusat">Pusat</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" name="status" required>
+          <option value="aktif">Aktif</option>
+          <option value="nonaktif">Nonaktif</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit" style="width:100%;">
+        <i class="fas fa-save"></i> Simpan Cabang
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalTrackingShipment">
+  <div class="modal-box" style="max-width:720px;">
+    <div class="modal-header">
+      <h5><i class="fas fa-map-location-dot" style="color:#10B981;margin-right:8px;"></i> Tracking Shipment</h5>
+      <button class="modal-close" onclick="closeModal('modalTrackingShipment')">✕</button>
+    </div>
+    <div style="padding:20px 20px 0;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">No Resi</div>
+          <div style="font-weight:800;font-family:monospace;color:#E84B13;font-size:14px;" id="trackResi">—</div>
+        </div>
+        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">🏬 Kota Asal</div>
+          <div style="font-weight:600;font-size:13px;" id="trackAsal">—</div>
+        </div>
+        <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">🏠 Kota Tujuan</div>
+          <div style="font-weight:600;font-size:13px;" id="trackTujuan">—</div>
+        </div>
+        <div style="background:#F5F3FF;border:1px solid #C4B5FD;border-radius:8px;padding:8px 14px;flex:1;min-width:120px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Status Paket</div>
+          <div style="font-weight:700;font-size:13px;color:#7C3AED;" id="trackStatus">—</div>
+        </div>
+      </div>
+
+      <!-- Peta -->
+      <div id="trackMapContainer" style="height:320px;border-radius:12px;overflow:hidden;border:1px solid #E5E7EB;background:#f0f4f8;"></div>
+
+      <div style="margin-top:10px;padding:8px 12px;background:#F9FAFB;border:1px solid #E5E7EB;
+                  border-radius:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="font-size:15px;">🏬</span> Kota Asal
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="font-size:15px;">🏠</span> Kota Tujuan
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="display:inline-block;width:28px;height:4px;background:#E84B13;border-radius:2px;"></span> Rute Dilalui
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="display:inline-block;width:28px;height:0;border-top:4px dashed #9CA3AF;"></span> Rute Sisa
+        </span>
+        <span style="font-size:10px;color:#9CA3AF;margin-left:auto;">OpenStreetMap</span>
+      </div>
+    </div>
+
+    <div style="padding:14px 20px 20px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+                  color:#6B7280;margin-bottom:8px;">🗺️ Panduan Status Paket</div>
+      <div id="trackLegendaEmoji"
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px;
+        max-height:200px;overflow-y:auto;border:1px solid #E5E7EB;border-radius:10px;padding:6px;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── STATUS_TRACK_INFO dimuat dari Python /api/map-config ─────────────────────
+let STATUS_TRACK_INFO = {};
+fetch('/api/map-config')
+  .then(r => r.json())
+  .then(cfg => { STATUS_TRACK_INFO = cfg.status_map; });
+
+// ── Buat marker emoji bulat ──────────────────────────────────────────────────
+function makeTrackIcon(emoji, bg, ring, size) {
+  return L.divIcon({
+    html: `<div style="background:${bg};border-radius:50%;width:${size}px;height:${size}px;
+           display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.46)}px;
+           border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3),0 0 0 4px ${ring};line-height:1;">${emoji}</div>`,
+    className:'', iconAnchor:[size/2, size/2]
+  });
+}
+
+// ── Bangun HTML legenda emoji (highlight status aktif) ───────────────────────
+function buildLegendaEmoji(status) {
+  return Object.entries(STATUS_TRACK_INFO).map(([key, info]) => {
+    const active = key === status;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;
+              ${active ? `background:#FFF1EC;border:1px solid #FBCBB0;` : `border:1px solid transparent;`}">
+      <span style="font-size:15px;line-height:1;">${info.emoji}</span>
+      <span style="font-size:11px;font-weight:${active ? '700' : '400'};
+        color:${active ? info.bg : '#6B7280'};">${info.label}</span>
+      ${active
+        ? `<span style="margin-left:auto;font-size:9px;background:${info.bg};color:white;
+             padding:1px 6px;border-radius:99px;white-space:nowrap;">● Saat ini</span>`
+        : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Buka modal tracking ──────────────────────────────────────────────────────
+function openTrackingModal(noResi, kotaAsal, kotaTujuan, status) {
+  const doOpen = function(STATUS_MAP) {
+    const info = STATUS_MAP[status] || {
+      emoji:'📦', bg:'#E84B13', ring:'rgba(232,75,19,.3)', label:status, ratio:0.5
+    };
+
+    document.getElementById('trackResi').textContent    = noResi;
+    document.getElementById('trackAsal').textContent    = kotaAsal;
+    document.getElementById('trackTujuan').textContent  = kotaTujuan;
+    document.getElementById('trackStatus').textContent  = info.emoji + ' ' + info.label;
+
+    const legendEl = document.getElementById('trackLegendaEmoji');
+    if (legendEl) legendEl.innerHTML = buildLegendaEmoji(status);
+
+    openModal('modalTrackingShipment');
+
+    setTimeout(function () {
+      if (window._trackMap) { window._trackMap.remove(); window._trackMap = null; }
+      const map = L.map('trackMapContainer', { zoomControl: true });
+      window._trackMap = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data © OpenStreetMap', maxZoom: 18
+      }).addTo(map);
+
+      const geocode = (query, cb) =>
+        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
+          encodeURIComponent(query + ', Jawa, Indonesia') + '&limit=1')
+          .then(r => r.json())
+          .then(d => cb(d && d.length ? [parseFloat(d[0].lat), parseFloat(d[0].lon)] : null))
+          .catch(() => cb(null));
+
+      geocode(kotaAsal, function (ptAsal) {
+        geocode(kotaTujuan, function (ptTujuan) {
+          ptAsal   = ptAsal   || [-6.2088, 106.8456];
+          ptTujuan = ptTujuan || [-7.2575, 112.7521];
+
+          const ratio   = info.ratio ?? 0.5;
+          const ptPaket = [
+            ptAsal[0] + (ptTujuan[0] - ptAsal[0]) * ratio,
+            ptAsal[1] + (ptTujuan[1] - ptAsal[1]) * ratio
+          ];
+
+          L.marker(ptAsal,   { icon: makeTrackIcon('🏬','#3B82F6','rgba(59,130,246,.3)',34) })
+            .addTo(map)
+            .bindPopup(`<div style="text-align:center;font-size:13px;">🏬 <b>Asal</b><br>
+              <span style="color:#3B82F6;">${kotaAsal}</span></div>`);
+
+          L.marker(ptTujuan, { icon: makeTrackIcon('🏠','#EF4444','rgba(239,68,68,.3)',34) })
+            .addTo(map)
+            .bindPopup(`<div style="text-align:center;font-size:13px;">🏠 <b>Tujuan</b><br>
+              <span style="color:#EF4444;">${kotaTujuan}</span></div>`);
+
+          L.marker(ptPaket,  { icon: makeTrackIcon(info.emoji, info.bg, info.ring, 36) })
+            .addTo(map)
+            .bindPopup(`<div style="text-align:center;font-size:13px;">
+              ${info.emoji} <b>${info.label}</b><br>
+              <span style="font-size:11px;color:#6B7280;">📦 ${noResi}</span></div>`)
+            .openPopup();
+
+          map.fitBounds(L.latLngBounds([ptAsal, ptTujuan, ptPaket]), { padding:[50,50] });
+
+          async function drawRoute(from, to, color, opacity, dash) {
+            const url = `https://router.project-osrm.org/route/v1/driving/`
+              + `${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;
+            try {
+              const res  = await fetch(url);
+              const data = await res.json();
+              if (data.code === 'Ok' && data.routes.length) {
+                const style = { color, weight: 5, opacity };
+                if (dash) style.dashArray = dash;
+                L.geoJSON(data.routes[0].geometry, { style }).addTo(map);
+                return;
+              }
+            } catch (e) {}
+            L.polyline([from, to], { color, weight: 5, opacity, dashArray: dash||null }).addTo(map);
+          }
+
+          if (ratio > 0) drawRoute(ptAsal,  ptPaket,  '#E84B13', 0.9,  null);
+          if (ratio < 1) drawRoute(ptPaket, ptTujuan, '#9CA3AF', 0.55, '8,6');
+        });
+      });
+    }, 300);
+  };
+
+  // Jika STATUS_TRACK_INFO sudah siap langsung pakai, jika belum fetch ulang
+  if (Object.keys(STATUS_TRACK_INFO).length > 0) {
+    doOpen(STATUS_TRACK_INFO);
+  } else {
+    fetch('/api/map-config')
+      .then(r => r.json())
+      .then(cfg => {
+        STATUS_TRACK_INFO = cfg.status_map;
+        doOpen(STATUS_TRACK_INFO);
+      });
+  }
+}
+</script>
 {% endblock %}

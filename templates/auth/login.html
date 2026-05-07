@@ -3,117 +3,413 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login – LogisTik Express Salsa</title>
+<title>Login – LogisTik Express</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap');
+  :root {
+    --brand:    #E84B13;
+    --brand-dk: #C03D0E;
+    --brand-lt: #FFF1EC;
+    --ink:      #0F0F1A;
+    --ink-2:    #3D3D52;
+    --ink-3:    #7B7B96;
+    --border:   #E8E8F0;
+    --surface:  #FAFAFA;
+    --white:    #FFFFFF;
+    --green:    #059669;
+    --amber:    #D97706;
+    --blue:     #2563EB;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; background: #0F0F1A; }
-  .left-panel {
-    flex: 1; background: linear-gradient(135deg, #E84B13 0%, #C03D0E 40%, #1A1A2E 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 60px; position: relative; overflow: hidden;
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #F5F5F8;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
-  .left-panel::before {
-    content: ''; position: absolute; top: -100px; right: -100px;
-    width: 400px; height: 400px; border-radius: 50%;
-    background: rgba(255,255,255,0.05);
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--ink);
+    padding: 0 40px;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
-  .left-panel::after {
-    content: ''; position: absolute; bottom: -80px; left: -80px;
-    width: 300px; height: 300px; border-radius: 50%;
-    background: rgba(255,255,255,0.05);
+  .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+  .nav-logo {
+    width: 38px; height: 38px; background: var(--brand);
+    border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 17px;
   }
-  .panel-icon { font-size: 64px; margin-bottom: 28px; }
-  .panel-title { font-family: 'Space Grotesk', sans-serif; font-size: 38px; font-weight: 800; color: white; text-align: center; line-height: 1.2; }
-  .panel-sub { color: rgba(255,255,255,0.7); font-size: 15px; text-align: center; margin-top: 16px; max-width: 340px; line-height: 1.7; }
-  .panel-features { margin-top: 36px; display: flex; flex-direction: column; gap: 12px; }
-  .feat { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.85); font-size: 14px; }
-  .feat-dot { width: 8px; height: 8px; background: #F5A623; border-radius: 50%; flex-shrink: 0; }
-  .right-panel { width: 480px; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 50px; }
-  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
-  .brand-icon { width: 44px; height: 44px; background: #E84B13; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
-  .brand-name { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800; color: #1A1A2E; }
-  h2 { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 800; color: #1A1A2E; margin-bottom: 6px; }
-  .subtitle { color: #6B7280; font-size: 14px; margin-bottom: 32px; }
-  .form-box { width: 100%; }
+  .nav-name {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 17px; color: white; letter-spacing: -.3px;
+  }
+  .nav-name span { color: var(--brand); }
+  .nav-right { display: flex; align-items: center; gap: 6px; }
+  .nav-link {
+    color: rgba(255,255,255,0.55); text-decoration: none;
+    font-size: 13.5px; font-weight: 500;
+    padding: 7px 15px; border-radius: 8px;
+    transition: all .18s;
+  }
+  .nav-link:hover { color: white; background: rgba(255,255,255,0.08); }
+  .nav-cta {
+    background: var(--brand); color: white;
+    text-decoration: none; font-size: 13.5px; font-weight: 600;
+    padding: 8px 18px; border-radius: 8px;
+    transition: background .18s;
+  }
+  .nav-cta:hover { background: var(--brand-dk); }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--ink);
+    padding: 64px 40px 72px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 120%, rgba(232,75,19,0.22) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(232,75,19,0.12); border: 1px solid rgba(232,75,19,0.25);
+    color: #FF7A52; font-size: 12px; font-weight: 600;
+    letter-spacing: .8px; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 99px; margin-bottom: 22px;
+  }
+  .hero-tag i { font-size: 10px; }
+  .hero h1 {
+    font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800; color: white; line-height: 1.1;
+    letter-spacing: -.5px; margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--brand); }
+  .hero p { color: rgba(255,255,255,0.5); font-size: 15px; font-weight: 300; }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 24px 64px;
+    gap: 32px;
+  }
+
+  /* ── LOGIN CARD ── */
+  .login-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    animation: fadeUp .35s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .card-header-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--brand-lt); color: var(--brand);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .card-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 700; color: var(--ink);
+  }
+  .card-header p {
+    font-size: 12px; color: var(--ink-3); margin-top: 1px;
+  }
+
+  .card-body { padding: 28px; }
+
+  /* ── FORM ── */
   .form-group { margin-bottom: 20px; }
-  label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 7px; }
+  .form-group label {
+    display: block;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--ink-3); margin-bottom: 8px;
+  }
   .input-wrap { position: relative; }
-  .input-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 15px; }
-  input {
-    width: 100%; padding: 12px 14px 12px 42px;
-    border: 1.5px solid #E5E7EB; border-radius: 12px;
-    font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; color: #1A1A2E;
-    transition: all .2s;
+  .input-wrap i {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%); color: #BABAC8; font-size: 14px;
+    pointer-events: none;
   }
-  input:focus { outline: none; border-color: #E84B13; box-shadow: 0 0 0 3px rgba(232,75,19,0.1); }
+  .input-wrap input {
+    width: 100%;
+    padding: 13px 14px 13px 42px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--ink); font-weight: 500;
+    transition: all .18s;
+    outline: none;
+    background: white;
+  }
+  .input-wrap input::placeholder { color: #BABAC8; font-weight: 400; }
+  .input-wrap input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(232,75,19,0.1);
+  }
+
+  /* ── BUTTON ── */
   .btn-login {
-    width: 100%; padding: 13px; background: #E84B13; color: white;
-    border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
-    font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: all .2s;
+    width: 100%; padding: 14px;
+    background: var(--brand); color: white;
+    border: none; border-radius: 10px;
+    font-size: 14.5px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all .18s;
     display: flex; align-items: center; justify-content: center; gap: 8px;
+    letter-spacing: .2px;
   }
-  .btn-login:hover { background: #C03D0E; transform: translateY(-1px); box-shadow: 0 8px 25px rgba(232,75,19,0.35); }
-  .divider { text-align: center; margin: 20px 0; color: #9CA3AF; font-size: 13px; position: relative; }
-  .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: #E5E7EB; }
-  .divider::before { left: 0; } .divider::after { right: 0; }
-  .link-reg { text-align: center; color: #6B7280; font-size: 13.5px; }
-  .link-reg a { color: #E84B13; font-weight: 700; text-decoration: none; }
-  .alert { padding: 12px 15px; border-radius: 10px; margin-bottom: 18px; font-size: 13.5px; display: flex; align-items: center; gap: 9px; }
-  .alert-danger { background: rgba(239,68,68,0.1); color: #991B1B; border: 1px solid rgba(239,68,68,0.25); }
-  .alert-success { background: rgba(16,185,129,0.1); color: #065F46; border: 1px solid rgba(16,185,129,0.25); }
-  .alert-info { background: rgba(59,130,246,0.1); color: #1E40AF; border: 1px solid rgba(59,130,246,0.25); }
- </style>
+  .btn-login:hover {
+    background: var(--brand-dk);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(232,75,19,0.3);
+  }
+  .btn-login:active { transform: translateY(0); }
+
+  /* ── ALERTS ── */
+  .alert {
+    padding: 12px 14px; border-radius: 9px;
+    margin-bottom: 20px; font-size: 13px;
+    display: flex; align-items: center; gap: 9px;
+    font-weight: 500; line-height: 1.4;
+  }
+  .alert-danger  { background: rgba(220,38,38,0.08);  color: #7F1D1D; border: 1px solid rgba(220,38,38,0.2); }
+  .alert-success { background: rgba(5,150,105,0.08);  color: #064E3B; border: 1px solid rgba(5,150,105,0.2); }
+  .alert-info    { background: rgba(37,99,235,0.08);  color: #1E3A8A; border: 1px solid rgba(37,99,235,0.2); }
+  .alert i       { flex-shrink: 0; font-size: 14px; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    text-align: center; margin: 22px 0 0;
+    color: var(--ink-3); font-size: 12.5px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── FOOTER NOTE ── */
+  .footer-note {
+    text-align: center; margin-top: 14px;
+    color: var(--ink-3); font-size: 12.5px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .footer-note i { color: var(--ink-3); font-size: 11px; }
+
+  /* ── INFO PANEL ── */
+  .info-panel {
+    width: 100%; max-width: 280px;
+    animation: fadeUp .35s .08s ease both;
+    display: flex; flex-direction: column; gap: 12px;
+    padding-top: 4px;
+  }
+  .info-card {
+    background: white; border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .info-card-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .info-card-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .icon-orange { background: var(--brand-lt); color: var(--brand); }
+  .icon-blue   { background: rgba(37,99,235,0.08); color: var(--blue); }
+  .icon-green  { background: rgba(5,150,105,0.08); color: var(--green); }
+  .info-card-head span {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 13px; color: var(--ink);
+  }
+  .info-feat {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 0; border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--ink-2); font-weight: 500;
+  }
+  .info-feat:first-of-type { border-top: none; padding-top: 0; }
+  .feat-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand); flex-shrink: 0;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex; justify-content: center; gap: 40px;
+    margin-top: 32px; flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+    color: white; display: block;
+  }
+  .stat-lbl { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 300; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--ink); color: rgba(255,255,255,0.4);
+    text-align: center; padding: 28px 24px;
+    font-size: 13px;
+  }
+  .footer strong { color: rgba(255,255,255,0.7); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 780px) {
+    .info-panel { display: none; }
+    .nav { padding: 0 20px; }
+    .hero { padding: 48px 24px 56px; }
+  }
+  @media (max-width: 480px) {
+    .main { padding: 28px 16px 48px; }
+  }
+</style>
 </head>
 <body>
-<div class="left-panel">
-  <div class="panel-icon"><i class="fas fa-truck-fast"></i></div>
-  <div class="panel-title">LogisTik<br>Express</div>
-  <div class="panel-sub">Platform Manajemen Distribusi Logistik Barang Terintegrasi</div>
-  <div class="panel-features">
-    <div class="feat"><div class="feat-dot"></div>Tracking paket real-time</div>
-    <div class="feat"><div class="feat-dot"></div>Manajemen multi cabang</div>
-    <div class="feat"><div class="feat-dot"></div>Pengiriman logistik antar kota</div>
-    <div class="feat"><div class="feat-dot"></div>Laporan & statistik lengkap</div>
-    <div class="feat"><div class="feat-dot"></div>Alur distribusi REG / YES / OKE</div>
+
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <div class="nav-logo"><i class="fas fa-truck-fast"></i></div>
+    <span class="nav-name">Logis<span>Tik</span> Express</span>
+  </a>
+  <div class="nav-right">
+    <a href="/tracking" class="nav-cta">Lacak Paket</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag"><i class="fas fa-shield-halved"></i> Portal Staf Internal</div>
+  <h1>Masuk ke <span>Dashboard</span><br>LogisTik Express</h1>
+  <p>Sistem manajemen distribusi logistik terintegrasi</p>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-num">10+</span>
+      <span class="stat-lbl">Kota terjangkau</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">24 Jam</span>
+      <span class="stat-lbl">Update status real-time</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">3</span>
+      <span class="stat-lbl">Layanan pengiriman</span>
+    </div>
   </div>
 </div>
-<div class="right-panel">
-  <div class="brand">
-    <div class="brand-icon"><i class="fas fa-truck-fast"></i></div>
-    <div class="brand-name">LogisTik Express</div>
-  </div>
-  <h2>Selamat Datang!</h2>
-  <p class="subtitle">Masuk ke akun Anda untuk melanjutkan</p>
-  {% with msgs = get_flashed_messages(with_categories=true) %}
-    {% for cat, msg in msgs %}
-      <div class="alert alert-{{ cat if cat in ['danger','success','info'] else 'info' }}">
-        <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}times-circle{% else %}info-circle{% endif %}"></i>
-        {{ msg }}
+
+<div class="main">
+  <div class="login-card">
+    <div class="card-header">
+      <div class="card-header-icon">
+        <i class="fas fa-right-to-bracket"></i>
       </div>
-    {% endfor %}
-  {% endwith %}
-  <form class="form-box" method="POST">
-    <div class="form-group">
-      <label>Email</label>
-      <div class="input-wrap">
-        <i class="fas fa-envelope"></i>
-        <input type="email" name="email" placeholder="email@example.com" required>
+      <div>
+        <h2>Masuk Akun</h2>
+        <p>Gunakan kredensial staf Anda</p>
       </div>
     </div>
-    <div class="form-group">
-      <label>Password</label>
-      <div class="input-wrap">
+    <div class="card-body">
+
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}
+          <div class="alert alert-{{ cat if cat in ['danger','success','info'] else 'info' }}">
+            <i class="fas fa-{% if cat == 'success' %}circle-check{% elif cat == 'danger' %}circle-xmark{% else %}circle-info{% endif %}"></i>
+            {{ msg }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST">
+        <div class="form-group">
+          <label>Username</label>
+          <div class="input-wrap">
+            <i class="fas fa-user"></i>
+            <input type="text" name="username" placeholder="Masukkan username Anda" required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:24px;">
+          <label>Password</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock"></i>
+            <input type="password" name="password" placeholder="••••••••" required>
+          </div>
+        </div>
+        <button class="btn-login" type="submit">
+          <i class="fas fa-right-to-bracket"></i> Masuk Sekarang
+        </button>
+      </form>
+
+      <div class="divider">sistem internal</div>
+      <div class="footer-note">
         <i class="fas fa-lock"></i>
-        <input type="password" name="password" placeholder="••••••••" required>
+        Hanya untuk staf terdaftar LogisTik Express
       </div>
+
     </div>
-    <button class="btn-login" type="submit">
-      <i class="fas fa-sign-in-alt"></i> Masuk Sekarang
-    </button>
-  </form>
-  <div class="divider">atau</div>
-  <div class="link-reg">Belum punya akun? <a href="/register">Daftar sebagai Pelanggan</a></div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-icon icon-orange"><i class="fas fa-boxes-stacked"></i></div>
+        <span>Fitur Tersedia</span>
+      </div>
+      <div class="info-feat"><div class="feat-dot"></div> Tracking paket real-time</div>
+      <div class="info-feat"><div class="feat-dot"></div> Manajemen multi cabang</div>
+      <div class="info-feat"><div class="feat-dot"></div> Input & edit data paket</div>
+      <div class="info-feat"><div class="feat-dot"></div> Laporan & statistik</div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-icon icon-blue"><i class="fas fa-truck-fast"></i></div>
+        <span>Layanan Pengiriman</span>
+      </div>
+      <div class="info-feat"><div class="feat-dot"></div> REG – Reguler</div>
+      <div class="info-feat"><div class="feat-dot"></div> YES – Yakin Esok Sampai</div>
+      <div class="info-feat"><div class="feat-dot"></div> OKE – Hemat</div>
+      <div class="info-feat"><div class="feat-dot"></div> JTR – Jez Trucking</div>      
+    </div>
+
+  </div>
+
+</div>
+
+<footer class="footer">
+  © 2025 <strong>LogisTik Express</strong> — Solusi Pengiriman Terpercaya & Tepat Waktu
+</footer>
+
 </body>
 </html>

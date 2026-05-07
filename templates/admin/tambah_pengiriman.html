@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+{% block title %}Buat Paket Baru – LogisTik{% endblock %}
+{% block topbar_title %}Buat Paket Baru – {{ cabang.nama_cabang if cabang else '' }}{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/admin" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/admin/tambah-pengiriman" class="nav-item active"><i class="fas fa-box-open"></i> Buat Paket Baru</a>
+<a href="/admin/payment" class="nav-item"><i class="fas fa-money-bill-wave"></i> Pembayaran</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+
+<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:14px 20px;margin-bottom:22px;">
+  <strong style="color:#1D4ED8;font-size:13px;">
+    <i class="fas fa-route"></i> Alur Distribusi Paket
+  </strong>
+  <div style="margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;">
+    <div style="background:white;border:1px solid #BFDBFE;border-radius:20px;padding:5px 12px;color:#1E40AF;">
+      <i class="fas fa-store"></i> Cabang Asal
+      <small style="color:#6B7280;display:block;text-align:center;">{{ cabang.nama_cabang if cabang else '' }}</small>
+    </div>
+    <i class="fas fa-arrow-right" style="color:#93C5FD;"></i>
+    <div style="background:white;border:1px solid #FCD34D;border-radius:20px;padding:5px 12px;color:#92400E;">
+      <i class="fas fa-warehouse"></i> Gateway Kota Asal
+      <small style="color:#6B7280;display:block;text-align:center;">Sortir & kirim antar kota</small>
+    </div>
+    <i class="fas fa-arrow-right" style="color:#93C5FD;"></i>
+    <div style="background:white;border:1px solid #86EFAC;border-radius:20px;padding:5px 12px;color:#15803D;">
+      <i class="fas fa-warehouse"></i> Gateway Kota Tujuan
+      <small style="color:#6B7280;display:block;text-align:center;">Terima & assign kurir</small>
+    </div>
+    <i class="fas fa-arrow-right" style="color:#93C5FD;"></i>
+    <div style="background:white;border:1px solid #C4B5FD;border-radius:20px;padding:5px 12px;color:#6D28D9;">
+      <i class="fas fa-motorcycle"></i> Kurir
+      <small style="color:#6B7280;display:block;text-align:center;">Antar ke penerima</small>
+    </div>
+    <i class="fas fa-arrow-right" style="color:#93C5FD;"></i>
+    <div style="background:white;border:1px solid #FCA5A5;border-radius:20px;padding:5px 12px;color:#DC2626;">
+      <i class="fas fa-home"></i> Penerima
+    </div>
+  </div>
+</div>
+
+<div class="card" style="max-width:760px;margin:0 auto;">
+  <div class="card-header">
+    <h5><i class="fas fa-box-open" style="color:var(--primary);"></i> Formulir Paket Baru</h5>
+    <span style="font-size:12px;color:#6B7280;">
+      Asal: <strong>{{ cabang.nama_cabang if cabang else '-' }}</strong>
+    </span>
+  </div>
+  <div style="padding:24px;">
+    <form method="POST" action="/admin/tambah-pengiriman">
+
+      <div style="background:#FFF5F3;border:1px solid rgba(232,75,19,0.2);
+        border-radius:10px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px;">
+          👤 Data Pengirim
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nama <span style="color:var(--danger);">*</span></label>
+            <input class="form-control" name="nama_pengirim" required placeholder="Nama lengkap pengirim">
+          </div>
+          <div class="form-group">
+            <label class="form-label">No. HP <span style="color:var(--danger);">*</span></label>
+            <input class="form-control" name="no_hp_pengirim" required placeholder="08xxxxxxxxxx">
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;">
+        📍 Data Penerima
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Nama Penerima <span style="color:var(--danger);">*</span></label>
+          <input class="form-control" name="nama_penerima" required placeholder="Nama penerima">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. HP Penerima <span style="color:var(--danger);">*</span></label>
+          <input class="form-control" name="no_hp_penerima" required placeholder="08xxxxxxxxxx">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap Penerima <span style="color:var(--danger);">*</span></label>
+        <textarea class="form-control" name="alamat_penerima" required
+          placeholder="Jl. Contoh No. 10, Kelurahan, Kecamatan..." style="min-height:70px;"></textarea>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;margin-top:4px;">
+        🏭 Tujuan & Gateway Pengiriman
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Kota Tujuan <span style="color:var(--danger);">*</span></label>
+          <select class="form-control" name="kota_tujuan" id="kotaTujuanSelect" required onchange="cekLokal()">
+            <option value="">-- Pilih Kota Tujuan --</option>
+            {% for g in gateways %}
+            <option value="{{ g.kota }}" data-gateway-id="{{ g.id }}">
+              {{ g.kota }}
+            </option>
+            {% endfor %}
+          </select>
+          <small style="color:#6B7280;">
+            Pilih kota tujuan. Gateway akan dipilih otomatis sesuai kota.
+          </small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            Gateway Kota Asal
+            <span title="Hub pengiriman di kota Anda. Paket akan dikirim ke sini setelah sortir."
+              style="cursor:help;color:#9CA3AF;">ⓘ</span>
+          </label>
+          {% for g in gateways %}{% if g.kota == cabang.kota %}
+          <input type="hidden" name="gateway_id" value="{{ g.id }}">
+          <div class="form-control" style="background:#F3F4F6;color:#374151;cursor:default;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-warehouse" style="color:var(--primary);"></i>
+            <span>{{ g.nama_cabang }} – {{ g.kota }} ({{ g.tipe|upper }})</span>
+          </div>
+          {% endif %}{% endfor %}
+          <small style="color:#6B7280;">
+            Otomatis sesuai kota cabang <strong>{{ cabang.kota }}</strong>.
+          </small>
+        </div>
+      </div>
+      <input type="hidden" name="gateway_tujuan_id" id="gatewayTujuanHidden">
+
+      <div id="infoLokal" style="display:none;background:#F0FDF4;border:1px solid #86EFAC;
+        border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;">
+        <i class="fas fa-map-marker-alt" style="color:#16A34A;"></i>
+        <strong style="color:#15803D;">Kemungkinan Paket Lokal</strong> —
+        Kota tujuan sama dengan kota asal. Sistem akan mengirim langsung via kurir lokal tanpa transit antar kota.
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Layanan <span style="color:var(--danger);">*</span></label>
+          <select class="form-control" name="layanan_id" id="layananSelect" required onchange="hitungHarga()">
+            <option value="">-- Pilih Layanan --</option>
+            {% for l in layanans %}
+            <option value="{{ l.id }}" data-harga="{{ l.harga_per_kg }}" data-hari="{{ l.estimasi_hari }}" data-kode="{{ l.kode }}">
+              {{ l.kode }} – {{ l.nama }} (Est. {{ l.estimasi_hari }} hari)
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jalur</label>
+          <select class="form-control" name="jalur" id="jalurSelect" onchange="hitungHarga()">
+            <option value="darat">🚚 Darat</option>
+            <option value="udara">✈️ Udara</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Berat Aktual (kg) <span style="color:var(--danger);">*</span></label>
+          <input class="form-control" name="berat" type="number" step="0.1" min="0.1"
+            required placeholder="Contoh: 2.5" oninput="hitungHarga()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Isi Paket</label>
+          <input class="form-control" name="isi_paket" placeholder="Elektronik, Pakaian, Makanan, dll">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Panjang (cm)</label>
+          <input class="form-control" name="panjang" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lebar (cm)</label>
+          <input class="form-control" name="lebar" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tinggi (cm)</label>
+          <input class="form-control" name="tinggi" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          Nilai Barang (Rp)
+          <small style="color:#6B7280;">biaya asuransi 0.2% dari nilai</small>
+        </label>
+        <input class="form-control" name="nilai_barang" type="number" placeholder="0" oninput="hitungHarga()">
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label" style="font-weight:700;">🪵 Packing Kayu (Opsional)</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;
+          background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:12px 14px;font-size:13px;">
+          <input type="checkbox" name="packing_kayu" id="packingKayu" value="1"
+            onchange="hitungHarga()"
+            style="width:18px;height:18px;accent-color:#D97706;cursor:pointer;">
+          <span>
+            Tambahkan packing kayu untuk perlindungan ekstra
+            <span style="display:block;font-size:11px;color:#92400E;margin-top:2px;">
+              + Rp5.000 per paket
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <div id="previewHarga" style="background:#F0FDF4;border:1px solid rgba(16,185,129,0.3);
+        border-radius:12px;padding:16px;margin-bottom:18px;display:none;">
+        <div style="font-size:12px;font-weight:700;color:#065F46;margin-bottom:10px;">
+          💰 Estimasi Biaya
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span>Berat Aktual:</span><strong id="prevAktual">-</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span id="prevVolLabel">Berat Volumetrik:</span><strong id="prevVol">-</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;
+          color:#D97706;font-weight:700;">
+          <span>✅ Berat Ditagihkan:</span><strong id="prevBayar">-</strong>
+        </div>
+        <hr style="border-color:rgba(16,185,129,0.3);margin:10px 0;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span>Biaya Kirim:</span><strong id="prevKirim">-</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span>Biaya Asuransi:</span><strong id="prevAsuransi">-</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span>Biaya Admin:</span><strong id="prevAdmin">Rp5.000</strong>
+        </div>
+        <div id="rowPackingKayu" style="display:none;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#D97706;">
+          <span>🪵 Packing Kayu:</span><strong id="prevPacking">Rp5.000</strong>
+        </div>
+        <div id="warnJTR" style="display:none;background:#FEF3C7;border:1px solid #FCD34D;
+          border-radius:8px;padding:8px 12px;font-size:12px;color:#92400E;margin-bottom:8px;">
+          ⚠️ <strong>Layanan JTR</strong> membutuhkan berat paket minimal <strong>10 kg</strong>.
+          Berat aktual Anda <span id="warnBeratJTR">-</span> kg.
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;
+          border-top:1px solid rgba(16,185,129,0.3);padding-top:8px;">
+          <span>Total:</span>
+          <span id="prevTotal" style="color:var(--primary);">-</span>
+        </div>
+        <div style="font-size:11px;color:#065F46;margin-top:6px;" id="prevEst"></div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;">
+        💳 Pembayaran
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Metode Bayar</label>
+          <select class="form-control" name="metode_bayar" id="metodeBayar" onchange="onMetodeBayarChange(this.value)">
+            <option value="tunai">💵 Tunai</option>
+            <option value="xendit">💳 Non-Tunai (Xendit)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status Bayar</label>
+          <select class="form-control" name="status_bayar" id="statusBayar">
+            <option value="pending">⏳ Pending</option>
+            <option value="lunas">✅ Lunas</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Info xendit -->
+      <div id="infoXendit" style="display:none;background:#EEF2FF;border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;font-weight:600;color:#4338CA;margin-bottom:6px;">
+          <i class="fas fa-info-circle"></i> Pembayaran Non-Tunai via Xendit
+        </div>
+        <div style="font-size:12px;color:#6B7280;">
+          Setelah paket dibuat, link pembayaran Xendit akan otomatis di-generate.<br>
+          Salin link dan kirim ke pelanggan. Status akan otomatis terupdate saat dibayar.<br>
+          <strong>Mendukung:</strong> QRIS, Virtual Account (BCA/BNI/BRI/Mandiri), OVO, DANA, ShopeePay, GoPay, Kartu Kredit.
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%;padding:13px;font-size:15px;">
+        <i class="fas fa-paper-plane"></i> Buat Paket & Generate Resi
+      </button>
+    </form>
+  </div>
+</div>
+<script>
+function onMetodeBayarChange(val) {
+  document.getElementById('infoXendit').style.display = val === 'xendit' ? 'block' : 'none';
+  const sb = document.getElementById('statusBayar');
+  if (val === 'xendit') {
+    sb.value = 'pending';
+    sb.disabled = true;
+  } else {
+    sb.disabled = false;
+  }
+}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const kotaAsal = "{{ cabang.kota if cabang else '' }}".toLowerCase();
+
+function cekLokal() {
+  const sel       = document.getElementById('kotaTujuanSelect');
+  const kotaTujuan = sel.value.toLowerCase().trim();
+  const isLokal    = kotaTujuan && kotaTujuan === kotaAsal;
+
+  document.getElementById('infoLokal').style.display = isLokal ? 'block' : 'none';
+
+  const selectedOpt = sel.options[sel.selectedIndex];
+  const gwId = selectedOpt ? selectedOpt.dataset.gatewayId || '' : '';
+  document.getElementById('gatewayTujuanHidden').value = gwId;
+}
+
+function hitungHarga() {
+  const layOpt = document.getElementById('layananSelect');
+  const opt    = layOpt.options[layOpt.selectedIndex];
+  const jalur  = document.getElementById('jalurSelect').value;
+  const berat  = parseFloat(document.querySelector('[name=berat]').value)        || 0;
+  const p      = parseFloat(document.querySelector('[name=panjang]').value)      || 0;
+  const l      = parseFloat(document.querySelector('[name=lebar]').value)        || 0;
+  const t      = parseFloat(document.querySelector('[name=tinggi]').value)       || 0;
+  const nilai  = parseFloat(document.querySelector('[name=nilai_barang]').value) || 0;
+  const isPacking = document.getElementById('packingKayu')?.checked || false;
+
+  if (!opt.value || !berat) {
+    document.getElementById('previewHarga').style.display = 'none';
+    return;
+  }
+
+  const kodeLayanan = (opt.dataset.kode || '').toUpperCase();
+  const isJTR       = kodeLayanan.includes('JTR');
+
+  const warnJTR = document.getElementById('warnJTR');
+  if (isJTR && berat < 10) {
+    document.getElementById('warnBeratJTR').textContent = berat.toFixed(2);
+    warnJTR.style.display = 'block';
+  } else {
+    warnJTR.style.display = 'none';
+  }
+
+  const divisor    = jalur === 'darat' ? 5000 : 6000;
+  const beratVol   = (p * l * t) / divisor;
+  const beratBayar = Math.max(berat, beratVol);
+  const harga      = parseFloat(opt.dataset.harga);
+  const hari       = opt.dataset.hari;
+  const biayaKirim = beratBayar * harga;
+  const asuransi   = nilai * 0.002;
+  const biayaAdmin = isJTR ? 5000 : 0;
+  const biayaPacking = isPacking ? 5000 : 0;
+  const total      = biayaKirim + asuransi + biayaAdmin + biayaPacking;
+  const fmt        = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+
+  document.getElementById('prevAktual').textContent   = berat.toFixed(2) + ' kg';
+  document.getElementById('prevVol').textContent      = beratVol.toFixed(2) + ' kg';
+  document.getElementById('prevVolLabel').textContent = `Berat Volumetrik (÷${divisor}):`;
+  document.getElementById('prevBayar').textContent    =
+    beratBayar.toFixed(2) + ' kg ' + (beratVol > berat ? '(volumetrik)' : '(aktual)');
+  document.getElementById('prevKirim').textContent    = fmt(biayaKirim);
+  document.getElementById('prevAsuransi').textContent = fmt(asuransi);
+
+  const adminRow = document.getElementById('prevAdmin').parentElement;
+  adminRow.style.display = isJTR ? 'flex' : 'none';
+
+  document.getElementById('rowPackingKayu').style.display = isPacking ? 'flex' : 'none';
+
+  document.getElementById('prevTotal').textContent    = fmt(total);
+  document.getElementById('prevEst').textContent      = `⏱ Estimasi tiba: ${hari} hari kerja`;
+  document.getElementById('previewHarga').style.display = 'block';
+}
+</script>
+{% endblock %}

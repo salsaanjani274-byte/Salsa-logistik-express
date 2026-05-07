@@ -1,22 +1,23 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard Admin – LogisTik{% endblock %}
-{% block topbar_title %}Admin Cabang – {{ cabang.nama_cabang if cabang else '' }}{% endblock %}
+{% block topbar_title %}Admin – {{ cabang.nama_cabang if cabang else '' }}{% endblock %}
 
 {% block sidebar_nav %}
 <div class="nav-section">Menu Utama</div>
 <a href="/admin" class="nav-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-<a href="#" class="nav-item" onclick="openModal('modalBuatPaket')"><i class="fas fa-box-open"></i> Buat Paket Baru</a>
+<a href="/admin/tambah-pengiriman" class="nav-item"><i class="fas fa-box-open"></i> Buat Paket Baru</a>
+<a href="/admin/payment" class="nav-item"><i class="fas fa-money-bill-wave"></i> Pembayaran</a>
 <a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
 {% endblock %}
 
 {% block content %}
-<!-- STATS -->
+
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-icon blue"><i class="fas fa-building"></i></div>
     <div class="stat-info">
       <div class="stat-val">{{ cabang.nama_cabang if cabang else '-' }}</div>
-      <div class="stat-label">{{ cabang.kota if cabang else 'Cabang Anda' }}</div>
+      <div class="stat-label">{{ cabang.tipe|upper if cabang else 'Cabang' }} – {{ cabang.kota if cabang else '' }}</div>
     </div>
   </div>
   <div class="stat-card">
@@ -40,65 +41,202 @@
       <div class="stat-label">Terkirim</div>
     </div>
   </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-wallet"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(pendapatan_cabang|float) }}</div>
+      <div class="stat-label">Pendapatan Lunas</div>
+    </div>
+  </div>
+  {% if total_terlambat > 0 %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#FEE2E2;">
+      <i class="fas fa-exclamation-triangle" style="color:#DC2626;"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-val" style="color:#DC2626;">{{ total_terlambat }}</div>
+      <div class="stat-label">Paket Terlambat</div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
+{% if cabang %}
+<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;
+  padding:14px 18px;margin-bottom:20px;font-size:13px;">
+  <strong>
+    <i class="fas fa-shield-alt" style="color:#3B82F6;"></i>
+    Wewenang Anda — {{ cabang.tipe|upper }}: {{ cabang.nama_cabang }}
+  </strong>
 
-<!-- TABEL PAKET -->
+  {% if cabang.tipe == 'cabang' %}
+  {# Admin Cabang Biasa: hanya bisa buat paket dan sortir #}
+  <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+    <span style="color:#6B7280;min-width:120px;">Tugas Anda:</span>
+    <span class="badge badge-primary">Buat Paket</span>
+    <i class="fas fa-arrow-right" style="color:#9CA3AF;"></i>
+    <span class="badge badge-warning">Sortir di Cabang</span>
+    <i class="fas fa-arrow-right" style="color:#9CA3AF;"></i>
+    <span class="badge badge-info">Kirim ke Gateway Kota Asal</span>
+  </div>
+  <div style="margin-top:6px;font-size:12px;color:#6B7280;">
+    Setelah paket dikirim ke gateway, tanggung jawab beralih ke Admin Gateway.
+  </div>
+
+  {% elif cabang.tipe in ['gateway', 'pusat'] %}
+  {# Admin Gateway: bisa jadi gateway ASAL atau gateway TUJUAN #}
+  <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+    <span style="color:#6B7280;min-width:160px;">Sebagai <b>Gateway Asal</b>:</span>
+    <span class="badge badge-info">Proses di Gateway Asal</span>
+    <i class="fas fa-arrow-right" style="color:#9CA3AF;"></i>
+    <span class="badge badge-warning">Kirim Antar Kota</span>
+    <i class="fas fa-arrow-right" style="color:#9CA3AF;"></i>
+    <span class="badge badge-success">Konfirmasi Tiba di Tujuan</span>
+  </div>
+  <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+    <span style="color:#6B7280;min-width:160px;">Sebagai <b>Gateway Tujuan</b>:</span>
+    <span class="badge badge-primary">Assign Kurir</span>
+    <i class="fas fa-arrow-right" style="color:#9CA3AF;"></i>
+    <span class="badge badge-primary">Kirim ke Penerima</span>
+  </div>
+  <div style="margin-top:6px;font-size:12px;color:#3B82F6;">
+    <i class="fas fa-lightbulb"></i>
+    Sebagai gateway tujuan, Anda yang assign kurir dan paket diantar langsung ke penerima.
+  </div>
+  {% endif %}
+
+  <div style="margin-top:8px;font-size:12px;color:#6B7280;">
+    Status darurat (semua posisi bisa set):
+    <span class="badge badge-danger">Bermasalah</span>
+    <span class="badge badge-danger">Dikembalikan</span>
+    <span class="badge badge-warning">Proses Retur</span>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="card-header">
-    <h5><i class="fas fa-list-alt" style="color:var(--primary);margin-right:8px;"></i>Daftar Paket</h5>
-    <button class="btn btn-primary btn-sm" onclick="openModal('modalBuatPaket')">
+    <h5>
+      <i class="fas fa-list-alt" style="color:var(--primary);margin-right:8px;"></i>
+      Daftar Paket
+    </h5>
+    <a href="/admin/tambah-pengiriman" class="btn btn-primary btn-sm">
       <i class="fas fa-plus"></i> Buat Paket
-    </button>
+    </a>
   </div>
-  <div class="table-wrap">
-    <table>
+  <div class="table-wrap" style="overflow-x:auto;">
+    <table style="min-width:900px;width:100%;">
       <thead>
         <tr>
-          <th>No Resi</th>
-          <th>Pengirim</th>
-          <th>Penerima</th>
-          <th>Asal</th>
-          <th>Tujuan</th>
-          <th>Layanan</th>
-          <th>Berat</th>
-          <th>Biaya</th>
-          <th>Status</th>
-          <th>Kurir</th>
-          <th>Aksi</th>
+          <th style="width:40px;text-align:center;">
+            <input type="checkbox" id="checkAll" title="Pilih semua" onchange="toggleCheckAll(this)">
+          </th>
+          <th style="min-width:140px;">No Resi</th>
+          <th style="min-width:110px;">Pengirim</th>
+          <th style="min-width:130px;">Penerima</th>
+          <th style="min-width:180px;">Rute</th>
+          <th style="min-width:70px;">Layanan</th>
+          <th style="min-width:70px;">Berat</th>
+          <th style="min-width:100px;">Biaya / Bayar</th>
+          <th style="min-width:130px;">Status</th>
+          <th style="min-width:90px;">Kurir</th>
+          <th style="min-width:110px;">Aksi</th>
         </tr>
       </thead>
       <tbody>
         {% for p in pakets %}
         <tr>
-          <td><span class="resi-code">{{ p.no_resi }}</span></td>
-          <td>{{ p.pengirim_nama }}</td>
+          <td style="text-align:center;vertical-align:middle;">
+            {% set allowed = paket_allowed.get(p.id, []) %}
+            {% if allowed %}
+            <input type="checkbox" class="paket-check"
+              value="{{ p.id }}"
+              data-allowed="{{ allowed | join(',') }}"
+              data-status="{{ p.status }}"
+              onchange="onCheckChange()">
+            {% endif %}
+          </td>
           <td>
-            <div>{{ p.nama_penerima }}</div>
+            <span class="resi-code" style="font-size:12px;">{{ p.no_resi }}</span>
+            {% if not p.gateway_id %}
+            <br><span class="badge badge-success" style="font-size:9px;padding:2px 6px;">LOKAL</span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">{{ p.pengirim_nama }}</td>
+          <td>
+            <div style="font-size:13px;">{{ p.nama_penerima }}</div>
             <div style="font-size:11px;color:#6B7280;">{{ p.no_hp_penerima }}</div>
           </td>
-          <td>{{ p.kota_asal }}</td>
-          <td>{{ p.kota_tujuan }}</td>
+          <td style="font-size:11px;">
+            <div>
+              <i class="fas fa-store" style="color:#3B82F6;width:14px;"></i>
+              {{ p.cabang_asal_nama or p.kota_asal }}
+            </div>
+            {% if p.gateway_asal_nama %}
+            <div style="color:#6B7280;padding-left:4px;">
+              ↓ <i class="fas fa-warehouse" style="color:#F59E0B;width:14px;"></i>
+              {{ p.gateway_asal_nama }}
+            </div>
+            {% endif %}
+            {% if p.gateway_tujuan_nama %}
+            <div style="color:#6B7280;padding-left:4px;">
+              ↓ <i class="fas fa-warehouse" style="color:#10B981;width:14px;"></i>
+              {{ p.gateway_tujuan_nama }}
+            </div>
+            {% endif %}
+            <div>
+              <i class="fas fa-home" style="color:#EF4444;width:14px;"></i>
+              {{ p.kota_tujuan }}
+            </div>
+          </td>
           <td><span class="badge badge-info">{{ p.layanan_kode }}</span></td>
-          <td>{{ p.berat_bayar }} kg</td>
-          <td><strong>Rp{{ "{:,.0f}".format(p.total_biaya|float) }}</strong></td>
+          <td style="font-size:13px;">{{ p.berat_bayar }} kg</td>
+          <td>
+            <strong style="font-size:13px;">Rp{{ "{:,.0f}".format(p.total_biaya|float) }}</strong>
+            <br>
+            {% if p.payment_status == 'lunas' %}
+            <span class="badge badge-success" style="font-size:10px;">Lunas</span>
+            {% elif p.payment_status == 'pending' %}
+            <span class="badge badge-warning" style="font-size:10px;">Pending</span>
+            {% else %}
+            <span class="badge badge-secondary" style="font-size:10px;">-</span>
+            {% endif %}
+          </td>
           <td>
             {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
             <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+            {% set info = cek_keterlambatan(p) %}
+            {% if info.terlambat %}
+            <br><small style="color:#DC2626;font-size:10px;">
+              <i class="fas fa-clock"></i> {{ info.label }}
+            </small>
+            {% endif %}
           </td>
           <td style="font-size:12px;">{{ p.kurir_nama or '-' }}</td>
           <td>
-            <button class="btn btn-warning btn-sm"
-              onclick="openUpdateModal('{{ p.id }}', '{{ p.no_resi }}', '{{ p.status }}')">
-              <i class="fas fa-edit"></i>
-            </button>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              {% set allowed = paket_allowed.get(p.id, []) %}
+              {% if allowed %}
+              <button class="btn btn-warning btn-sm" data-id="{{ p.id }}" data-resi="{{ p.no_resi }}"
+                data-status="{{ p.status }}" data-allowed="{{ allowed | join(',') }}" onclick="openUpdateModal(this)">
+                <i class="fas fa-edit"></i> Update
+              </button>
+              {% else %}
+              <span style="color:#9CA3AF;font-size:11px;" title="Paket ini tidak dalam wewenang Anda saat ini">–</span>
+              {% endif %}
+              <button class="btn btn-sm" style="background:#10B981;color:white;"
+                onclick="openTrackingModal('{{ p.no_resi }}', '{{ p.kota_asal }}', '{{ p.kota_tujuan }}', '{{ p.status }}')"
+                title="Tracking Shipment">
+                <i class="fas fa-map-marked-alt"></i> Lacak
+              </button>
+            </div>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="10" style="text-align:center;color:#6B7280;padding:40px;">
+          <td colspan="11" style="text-align:center;color:#6B7280;padding:40px;">
             <i class="fas fa-box-open" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>
-            Belum ada paket di cabang ini
+            Belum ada paket yang terkait dengan posisi Anda
           </td>
         </tr>
         {% endfor %}
@@ -107,164 +245,85 @@
   </div>
 </div>
 
-<!-- MODAL: BUAT PAKET -->
-<div class="modal-overlay" id="modalBuatPaket">
-  <div class="modal-box" style="max-width:620px;">
-    <div class="modal-header">
-      <h4><i class="fas fa-box-open" style="color:var(--primary);margin-right:8px;"></i>Buat Paket Baru</h4>
-      <button class="modal-close" onclick="closeModal('modalBuatPaket')">✕</button>
-    </div>
-    <form method="POST" action="/admin/paket/buat">
-      <div
-        style="background:#FFF5F3;border:1px solid rgba(232,75,19,0.2);border-radius:10px;padding:14px;margin-bottom:18px;">
-        <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:4px;">📦 Informasi Pengirim
-        </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label">Email Pengirim (harus terdaftar)</label>
-          <input class="form-control" name="email_pengirim" type="email" required placeholder="email@pelanggan.com">
-        </div>
-      </div>
-
-      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px;">📍 Informasi Penerima</div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Nama Penerima</label>
-          <input class="form-control" name="nama_penerima" required placeholder="Nama penerima">
-        </div>
-        <div class="form-group">
-          <label class="form-label">No. HP Penerima</label>
-          <input class="form-control" name="no_hp_penerima" required placeholder="08xxxxxxxxxx">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Alamat Penerima</label>
-        <textarea class="form-control" name="alamat_penerima" required placeholder="Alamat lengkap penerima..."
-          style="min-height:70px;"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Kota Tujuan</label>
-        <select class="form-control" name="kota_tujuan" required>
-          <option value="">-- Pilih Kota Tujuan --</option>
-          {% for c in cabangs %}
-          <option value="{{ c.kota }}">{{ c.kota }} ({{ c.nama_cabang }})</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px;margin-top:4px;">📦 Detail Paket
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Layanan</label>
-          <select class="form-control" name="layanan_id" required id="layananSelect" onchange="hitungHarga()">
-            <option value="">-- Pilih Layanan --</option>
-            {% for l in layanans %}
-            <option value="{{ l.id }}" data-harga="{{ l.harga_per_kg }}" data-hari="{{ l.estimasi_hari }}">
-              {{ l.kode }} – {{ l.nama }} (Est. {{ l.estimasi_hari }} hari)
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Berat (kg)</label>
-          <input class="form-control" name="berat" type="number" step="0.1" min="0.1" required placeholder="1.5"
-            oninput="hitungHarga()">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div class="form-group">
-          <label class="form-label">Panjang (cm)</label>
-          <input class="form-control" name="panjang" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Lebar (cm)</label>
-          <input class="form-control" name="lebar" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Tinggi (cm)</label>
-          <input class="form-control" name="tinggi" type="number" step="0.1" placeholder="0" oninput="hitungHarga()">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Isi Paket</label>
-          <input class="form-control" name="isi_paket" placeholder="Elektronik, Pakaian, dll">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Nilai Barang (Rp)</label>
-          <input class="form-control" name="nilai_barang" type="number" placeholder="0" oninput="hitungHarga()">
-        </div>
-      </div>
-
-      <!-- PREVIEW HARGA -->
-      <div id="previewHarga"
-        style="background:#F0FDF4;border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:16px;margin-bottom:18px;display:none;">
-        <div style="font-size:12px;font-weight:700;color:#065F46;margin-bottom:10px;">💰 Estimasi Biaya</div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-          <span>Biaya Kirim:</span><strong id="prevKirim">-</strong>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-          <span>Biaya Asuransi:</span><strong id="prevAsuransi">-</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;border-top:1px solid rgba(16,185,129,0.3);padding-top:8px;">
-          <span>Total:</span><span id="prevTotal" style="color:var(--primary);">-</span>
-        </div>
-        <div style="font-size:11px;color:#065F46;margin-top:6px;" id="prevEst"></div>
-      </div>
-
-      <button class="btn btn-primary" type="submit" style="width:100%;padding:13px;">
-        <i class="fas fa-paper-plane"></i> Buat Paket & Generate Resi
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- MODAL: UPDATE STATUS -->
 <div class="modal-overlay" id="modalUpdateStatus">
   <div class="modal-box">
     <div class="modal-header">
-      <h4><i class="fas fa-sync" style="color:var(--warning);margin-right:8px;"></i>Update Status Paket</h4>
+      <h4>
+        <i class="fas fa-sync" style="color:var(--warning);margin-right:8px;"></i>
+        Update Status Paket
+      </h4>
       <button class="modal-close" onclick="closeModal('modalUpdateStatus')">✕</button>
     </div>
-    <div
-      style="background:#FFF9F0;border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px;margin-bottom:18px;">
+
+    <div style="background:#FFF9F0;border:1px solid rgba(245,158,11,0.2);
+      border-radius:10px;padding:12px;margin-bottom:18px;">
       <div style="font-size:12px;color:#92400E;">No Resi</div>
       <div class="resi-code" style="font-size:15px;" id="updateResiDisplay">-</div>
     </div>
+
+    <div style="margin-bottom:14px;font-size:12px;color:#6B7280;">
+      Status sekarang:
+      <span id="currentStatusBadge" class="badge badge-secondary">-</span>
+    </div>
+
     <form method="POST" id="formUpdateStatus" action="">
       <div class="form-group">
-        <label class="form-label">Status Baru</label>
-        <select class="form-control" name="status" required>
-          <option value="sorting_origin">Sorting Cabang Asal</option>
-          <option value="in_transit_gateway">Dikirim ke Gateway</option>
-          <option value="gateway_processing">Proses di Gateway</option>
-          <option value="on_transit">Dalam Perjalanan Antar Kota</option>
-          <option value="arrived_destination">Tiba di Cabang Tujuan</option>
-          <option value="out_for_delivery">Sedang Diantar Kurir</option>
-          <option value="delivered">Terkirim (POD)</option>
-          <option value="returned">Dikembalikan</option>
-          <option value="problem">Bermasalah</option>
+        <label class="form-label">
+          Ubah ke Status
+          <small style="color:#6B7280;">(hanya status sesuai posisi Anda)</small>
+        </label>
+        <select class="form-control" name="status" id="statusSelect" required onchange="toggleKurirSection()">
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Assign Kurir</label>
-        <select class="form-control" name="kurir_id">
-          <option value="">-- Tidak Assign Kurir --</option>
+
+      <div class="form-group" id="sectionKurir" style="display:none;">
+        <label class="form-label">
+          <i class="fas fa-motorcycle" style="color:var(--primary);"></i>
+          Assign Kurir <span style="color:var(--danger);">*</span>
+        </label>
+        <select class="form-control" name="kurir_id" id="kurirSelect">
+          <option value="">-- Pilih Kurir --</option>
           {% for k in kurirs %}
           <option value="{{ k.id }}">{{ k.nama }}</option>
           {% endfor %}
         </select>
+        <small style="color:#6B7280;">
+          Kurir dari gateway ini yang akan mengantar langsung ke alamat penerima.
+        </small>
       </div>
+
+      <div class="form-group" id="sectionDriver" style="display:none;">
+        <label class="form-label">
+          <i class="fas fa-truck" style="color:#7C3AED;"></i>
+          Assign Driver Antar Kota <span style="color:var(--danger);">*</span>
+        </label>
+        <select class="form-control" name="driver_id" id="driverSelect">
+          <option value="">-- Pilih Driver --</option>
+          {% for d in drivers %}
+          <option value="{{ d.id }}">{{ d.nama }}</option>
+          {% endfor %}
+        </select>
+        <small style="color:#6B7280;">
+          Driver yang bertugas mengangkut paket antar kota / cabang → gateway.
+        </small>
+      </div>
+
       <div class="form-group">
-        <label class="form-label">Lokasi</label>
-        <input class="form-control" name="lokasi" placeholder="Lokasi saat ini...">
+        <label class="form-label">Lokasi Saat Ini</label>
+        <input class="form-control" name="lokasi" id="adminLokasiText" placeholder="Contoh: Gudang Gateway Surabaya">
       </div>
       <div class="form-group">
         <label class="form-label">Keterangan</label>
-        <textarea class="form-control" name="keterangan" placeholder="Keterangan tambahan..."
-          style="min-height:70px;"></textarea>
+        <textarea class="form-control" name="keterangan" placeholder="Keterangan opsional..."
+          style="min-height:65px;"></textarea>
       </div>
+
+      <div style="background:#F9FAFB;border-radius:8px;padding:10px;
+        font-size:11px;color:#6B7280;margin-bottom:14px;">
+        <i class="fas fa-shield-alt"></i>
+        <b>Validasi:</b> Perubahan status dicatat di riwayat dan dikirim sebagai notifikasi ke pengirim.
+      </div>
+
       <button class="btn btn-warning" type="submit" style="width:100%;">
         <i class="fas fa-save"></i> Simpan Perubahan
       </button>
@@ -275,33 +334,483 @@
 
 {% block scripts %}
 <script>
-  function openUpdateModal(id, resi, status) {
+  const STATUS_LABELS = {{ STATUS_LABEL | tojson }};
+  const KURIR_TRIGGER  = ['out_for_delivery'];
+  const DRIVER_TRIGGER = ['in_transit_gateway', 'on_transit'];
+
+  function openUpdateModal(btn) {
+    const id = btn.dataset.id;
+    const resi = btn.dataset.resi;
+    const currentStatus = btn.dataset.status;
+    const allowedList = (btn.dataset.allowed || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+
     document.getElementById('updateResiDisplay').textContent = resi;
     document.getElementById('formUpdateStatus').action = '/admin/paket/update-status/' + id;
+
+    const label = STATUS_LABELS[currentStatus]?.[0] ?? currentStatus;
+    const color = STATUS_LABELS[currentStatus]?.[1] ?? 'secondary';
+    const badge = document.getElementById('currentStatusBadge');
+    badge.textContent = label;
+    badge.className = `badge badge-${color}`;
+
+    const sel = document.getElementById('statusSelect');
+    sel.innerHTML = '';
+    allowedList.forEach(s => {
+      if (!STATUS_LABELS[s]) return;
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = STATUS_LABELS[s][0];
+      if (s === currentStatus) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    toggleKurirSection();
     openModal('modalUpdateStatus');
   }
-  function hitungHarga() {
-    const sel = document.getElementById('layananSelect');
-    const opt = sel.options[sel.selectedIndex];
-    const berat = parseFloat(document.querySelector('[name=berat]').value) || 0;
-    const p = parseFloat(document.querySelector('[name=panjang]').value) || 0;
-    const l = parseFloat(document.querySelector('[name=lebar]').value) || 0;
-    const t = parseFloat(document.querySelector('[name=tinggi]').value) || 0;
-    const nilai = parseFloat(document.querySelector('[name=nilai_barang]').value) || 0;
-    if (!opt.value || !berat) { document.getElementById('previewHarga').style.display = 'none'; return; }
-    const harga = parseFloat(opt.dataset.harga);
-    const hari = opt.dataset.hari;
-    const beratVol = (p * l * t) / 6000;
-    const beratBayar = Math.max(berat, beratVol);
-    const biayaKirim = beratBayar * harga;
-    const asuransi = nilai * 0.002;
-    const total = biayaKirim + asuransi;
-    const fmt = n => 'Rp' + n.toLocaleString('id-ID');
-    document.getElementById('prevKirim').textContent = fmt(biayaKirim);
-    document.getElementById('prevAsuransi').textContent = fmt(asuransi);
-    document.getElementById('prevTotal').textContent = fmt(total);
-    document.getElementById('prevEst').textContent = `⏱ Estimasi tiba: ${hari} hari kerja | Berat bayar: ${beratBayar.toFixed(2)} kg`;
-    document.getElementById('previewHarga').style.display = 'block';
+
+  /**
+   * Tampilkan/sembunyikan section assign kurir
+   * berdasarkan status yang dipilih di dropdown.
+   */
+  function toggleKurirSection() {
+    const status = document.getElementById('statusSelect').value;
+    document.getElementById('sectionKurir').style.display =
+      KURIR_TRIGGER.includes(status) ? 'block' : 'none';
+    document.getElementById('sectionDriver').style.display =
+      DRIVER_TRIGGER.includes(status) ? 'block' : 'none';
   }
+
+  /* ── TRACKING SHIPMENT MAP MODAL ── */
+
+  // STATUS_TRACK_INFO dimuat dari Python /api/map-config
+  let STATUS_TRACK_INFO = {};
+  fetch('/api/map-config')
+    .then(r => r.json())
+    .then(cfg => { STATUS_TRACK_INFO = cfg.status_map; });
+
+
+  function makeTrackIcon(emoji, bg, ring, size) {
+    return L.divIcon({
+      html: `<div style="background:${bg};border-radius:50%;width:${size}px;height:${size}px;
+           display:flex;align-items:center;justify-content:center;font-size:${Math.round(size * 0.46)}px;
+           border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3),0 0 0 4px ${ring};line-height:1;">${emoji}</div>`,
+      className: '', iconAnchor: [size / 2, size / 2]
+    });
+  }
+
+  function buildLegendaEmoji(status) {
+    // STATUS_TRACK_INFO sudah diisi dari /api/map-config
+    return Object.entries(STATUS_TRACK_INFO).map(([key, info]) => {
+      const active = key === status;
+      return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;
+              ${active ? 'background:#FFF1EC;border:1px solid #FBCBB0;' : 'border:1px solid transparent;'}">
+      <span style="font-size:15px;line-height:1;">${info.emoji}</span>
+      <span style="font-size:11px;font-weight:${active ? '700' : '400'};
+        color:${active ? info.bg : '#6B7280'};">${info.label}</span>
+      ${active ? '<span style="margin-left:auto;font-size:9px;background:' + info.bg + ';color:white;padding:1px 6px;border-radius:99px;white-space:nowrap;">● Saat ini</span>' : ''}
+    </div>`;
+    }).join('');
+  }
+
+  function openTrackingModal(noResi, kotaAsal, kotaTujuan, status) {
+    // Pastikan config sudah dimuat, lalu buka modal
+    const doOpen = function (STATUS_MAP) {
+      const info = STATUS_MAP[status] || { emoji: '📦', bg: '#E84B13', ring: 'rgba(232,75,19,.3)', label: status, ratio: 0.5 };
+
+      document.getElementById('trackResi').textContent = noResi;
+      document.getElementById('trackAsal').textContent = kotaAsal;
+      document.getElementById('trackTujuan').textContent = kotaTujuan;
+
+      const trackStatusEl = document.getElementById('trackStatus');
+      trackStatusEl.textContent = info.emoji + ' ' + info.label;
+
+      const legendEl = document.getElementById('trackLegendaEmoji');
+      if (legendEl) legendEl.innerHTML = buildLegendaEmoji(status);
+
+      openModal('modalTrackingShipment');
+
+      setTimeout(function () {
+        if (window._trackMap) { window._trackMap.remove(); window._trackMap = null; }
+        const map = L.map('trackMapContainer', { zoomControl: true });
+        window._trackMap = map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data © OpenStreetMap contributors', maxZoom: 18
+        }).addTo(map);
+
+        const geocode = function (query, cb) {
+          fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
+            encodeURIComponent(query + ', Jawa, Indonesia') + '&limit=1')
+            .then(r => r.json())
+            .then(d => cb(d && d.length ? [parseFloat(d[0].lat), parseFloat(d[0].lon)] : null))
+            .catch(() => cb(null));
+        };
+
+        geocode(kotaAsal, function (ptAsal) {
+          geocode(kotaTujuan, function (ptTujuan) {
+            ptAsal = ptAsal || [-6.2088, 106.8456];
+            ptTujuan = ptTujuan || [-7.2575, 112.7521];
+
+            const ratio = info.ratio ?? 0.5;
+            const curLat = ptAsal[0] + (ptTujuan[0] - ptAsal[0]) * ratio;
+            const curLon = ptAsal[1] + (ptTujuan[1] - ptAsal[1]) * ratio;
+            const ptPaket = [curLat, curLon];
+
+            const mkAsal = makeTrackIcon('🏬', '#3B82F6', 'rgba(59,130,246,.3)', 34);
+            const mkTujuan = makeTrackIcon('🏠', '#EF4444', 'rgba(239,68,68,.3)', 34);
+            const mkPaket = makeTrackIcon(info.emoji, info.bg, info.ring, 36);
+
+            L.marker(ptAsal, { icon: mkAsal })
+              .addTo(map)
+              .bindPopup(`<div style="text-align:center;font-size:13px;">🏬 <b>Asal</b><br><span style="color:#3B82F6;">${kotaAsal}</span></div>`);
+
+            L.marker(ptTujuan, { icon: mkTujuan })
+              .addTo(map)
+              .bindPopup(`<div style="text-align:center;font-size:13px;">🏠 <b>Tujuan</b><br><span style="color:#EF4444;">${kotaTujuan}</span></div>`);
+
+            L.marker(ptPaket, { icon: mkPaket })
+              .addTo(map)
+              .bindPopup(`<div style="text-align:center;font-size:13px;">${info.emoji} <b>${info.label}</b><br>
+             <span style="font-size:11px;color:#6B7280;">📦 ${noResi}</span></div>`)
+              .openPopup();
+
+            map.fitBounds(L.latLngBounds([ptAsal, ptTujuan, ptPaket]), { padding: [50, 50] });
+
+            async function drawOsrmRoute(from, to, color, opacity, dashArray) {
+              const coords = from[1] + ',' + from[0] + ';' + to[1] + ',' + to[0];
+              const url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
+              try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.code === 'Ok' && data.routes.length) {
+                  const style = { color, weight: 5, opacity };
+                  if (dashArray) style.dashArray = dashArray;
+                  L.geoJSON(data.routes[0].geometry, { style }).addTo(map);
+                } else {
+                  L.polyline([from, to], { color, weight: 5, opacity, dashArray: dashArray || null }).addTo(map);
+                }
+              } catch (e) {
+                L.polyline([from, to], { color, weight: 5, opacity, dashArray: dashArray || null }).addTo(map);
+              }
+            }
+
+            if (ratio > 0) drawOsrmRoute(ptAsal, ptPaket, '#E84B13', 0.9, null);
+            if (ratio < 1) drawOsrmRoute(ptPaket, ptTujuan, '#9CA3AF', 0.55, '8,6');
+          });
+        });
+      }, 300);
+    };
+
+    // Jika STATUS_TRACK_INFO sudah ada (fetch selesai), langsung pakai. Jika belum, fetch ulang.
+    if (Object.keys(STATUS_TRACK_INFO).length > 0) {
+      doOpen(STATUS_TRACK_INFO);
+    } else {
+      fetch('/api/map-config')
+        .then(r => r.json())
+        .then(cfg => {
+          STATUS_TRACK_INFO = cfg.status_map;
+          doOpen(STATUS_TRACK_INFO);
+        });
+    }
+  }
+</script>
+
+<!-- MODAL TRACKING SHIPMENT -->
+<div class="modal-overlay" id="modalTrackingShipment">
+  <div class="modal-box" style="max-width:720px;">
+    <div class="modal-header">
+      <h5><i class="fas fa-map-location-dot" style="color:#10B981;margin-right:8px;"></i> Tracking Shipment</h5>
+      <button class="modal-close" onclick="closeModal('modalTrackingShipment')">✕</button>
+    </div>
+    <div style="padding:20px 20px 0;">
+      <!-- Info bar -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <div
+          style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">No
+            Resi</div>
+          <div style="font-weight:800;font-family:monospace;color:#E84B13;font-size:14px;" id="trackResi">—</div>
+        </div>
+        <div
+          style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">🏬
+            Kota Asal</div>
+          <div style="font-weight:600;font-size:13px;" id="trackAsal">—</div>
+        </div>
+        <div
+          style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 14px;flex:1;min-width:110px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">🏠
+            Kota Tujuan</div>
+          <div style="font-weight:600;font-size:13px;" id="trackTujuan">—</div>
+        </div>
+        <div
+          style="background:#F5F3FF;border:1px solid #C4B5FD;border-radius:8px;padding:8px 14px;flex:1;min-width:120px;">
+          <div style="color:#6B7280;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Status
+            Paket</div>
+          <div style="font-weight:700;font-size:13px;color:#7C3AED;" id="trackStatus">—</div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div id="trackMapContainer"
+        style="height:340px;border-radius:12px;overflow:hidden;border:1px solid #E5E7EB;background:#f0f4f8;"></div>
+
+      <!-- Legenda marker peta -->
+      <div style="margin-top:10px;padding:8px 12px;background:#F9FAFB;border:1px solid #E5E7EB;
+                  border-radius:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="font-size:15px;">🏬</span> Kota Asal
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="font-size:15px;">🏠</span> Kota Tujuan
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="display:inline-block;width:28px;height:4px;background:#E84B13;border-radius:2px;"></span> Rute
+          Dilalui
+        </span>
+        <span style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:5px;">
+          <span style="display:inline-block;width:28px;height:0;border-top:4px dashed #9CA3AF;"></span> Rute Sisa
+        </span>
+        <span style="font-size:10px;color:#9CA3AF;margin-left:auto;">OpenStreetMap</span>
+      </div>
+    </div>
+
+    <!-- Panel legenda status emoji -->
+    <div style="padding:14px 20px 20px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+                  color:#6B7280;margin-bottom:8px;">🗺️ Panduan Status Paket</div>
+      <div id="trackLegendaEmoji" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px;
+                  max-height:200px;overflow-y:auto;border:1px solid #E5E7EB;border-radius:10px;padding:6px;">
+        <!-- diisi JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- ══════════════════════════════════════════
+     BULK ACTION BAR (muncul saat ada checkbox dipilih)
+══════════════════════════════════════════ -->
+<div id="bulkBar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#1E293B;color:#fff;border-radius:16px;padding:14px 22px;
+  box-shadow:0 8px 32px rgba(0,0,0,.35);z-index:999;
+  align-items:center;gap:14px;min-width:340px;max-width:90vw;">
+  <span id="bulkCount" style="font-weight:700;font-size:15px;white-space:nowrap;">0 dipilih</span>
+  <span style="color:#64748B;">|</span>
+  <button class="btn btn-warning btn-sm" onclick="openBulkModal()">
+    <i class="fas fa-layer-group"></i> Update Sekaligus
+  </button>
+  <button class="btn btn-sm" style="background:#334155;color:#CBD5E1;" onclick="clearAllChecks()">
+    <i class="fas fa-times"></i> Batal
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL BULK UPDATE STATUS
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalBulkUpdate" onclick="if(event.target===this) closeBulkModal()">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h4>
+        <i class="fas fa-layer-group" style="color:var(--warning);margin-right:8px;"></i>
+        Bulk Update Status
+      </h4>
+      <button class="modal-close" onclick="closeBulkModal()">✕</button>
+    </div>
+
+    <div style="background:#FFF9F0;border:1px solid rgba(245,158,11,.25);border-radius:10px;
+      padding:12px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#92400E;margin-bottom:6px;">Paket yang dipilih:</div>
+      <div id="bulkResiList" style="font-family:monospace;font-size:11px;color:#E84B13;
+        max-height:90px;overflow-y:auto;line-height:1.8;white-space:pre;"></div>
+    </div>
+
+    <div id="bulkWarning" style="display:none;background:#FEF2F2;border:1px solid #FECACA;
+      border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#991B1B;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span id="bulkWarningText"></span>
+    </div>
+
+    <form method="POST" action="/admin/paket/bulk-update" id="formBulkUpdate">
+      <div id="bulkHiddenIds"></div>
+
+      <div class="form-group">
+        <label class="form-label">
+          Status Tujuan <span style="color:var(--danger);">*</span>
+          <small style="color:#6B7280;"> — hanya status yang berlaku untuk semua paket terpilih</small>
+        </label>
+        <select class="form-control" name="status" id="bulkStatusSelect" required onchange="onBulkStatusChange()">
+          <option value="">-- Pilih Status --</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="bulkSectionKurir" style="display:none;">
+        <label class="form-label">
+          <i class="fas fa-motorcycle" style="color:var(--primary);"></i>
+          Assign Kurir <span style="color:var(--danger);">*</span>
+        </label>
+        <select class="form-control" name="kurir_id">
+          <option value="">-- Pilih Kurir --</option>
+          {% for k in kurirs %}
+          <option value="{{ k.id }}">{{ k.nama }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group" id="bulkSectionDriver" style="display:none;">
+        <label class="form-label">
+          <i class="fas fa-truck" style="color:#7C3AED;"></i>
+          Assign Driver <span style="color:var(--danger);">*</span>
+        </label>
+        <select class="form-control" name="driver_id">
+          <option value="">-- Pilih Driver --</option>
+          {% for d in drivers %}
+          <option value="{{ d.id }}">{{ d.nama }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Lokasi Saat Ini</label>
+        <input class="form-control" name="lokasi" placeholder="Contoh: Gudang Gateway Bandung">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Keterangan (opsional)</label>
+        <textarea class="form-control" name="keterangan"
+          placeholder="Berlaku untuk semua paket yang dipilih..." style="min-height:60px;"></textarea>
+      </div>
+
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;
+        padding:10px 14px;font-size:11px;color:#166534;margin-bottom:14px;">
+        <i class="fas fa-info-circle"></i>
+        Paket yang tidak berwenang untuk status ini akan dilewati secara otomatis, sisanya tetap diproses.
+      </div>
+
+      <button class="btn btn-warning" type="submit" style="width:100%;" id="bulkSubmitBtn" disabled>
+        <i class="fas fa-save"></i> Update Semua Paket Terpilih
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ─── Data STATUS_LABEL dari Jinja ───────────────────────────
+const STATUS_LABEL_MAP = {
+  {% for k, v in STATUS_LABEL.items() %}
+  "{{ k }}": "{{ v[0] }}",
+  {% endfor %}
+};
+
+// ─── Bulk modal open/close ───────────────────────────────────
+function closeBulkModal() {
+  closeModal('modalBulkUpdate');
+  // Tampilkan kembali bulk bar jika masih ada paket yang dipilih
+  const checked = document.querySelectorAll('.paket-check:checked');
+  if (checked.length > 0) {
+    document.getElementById('bulkBar').style.display = 'flex';
+  }
+}
+
+// ─── Checkbox logic ─────────────────────────────────────────
+function toggleCheckAll(cb) {
+  document.querySelectorAll('.paket-check').forEach(function(c) { c.checked = cb.checked; });
+  onCheckChange();
+}
+
+function onCheckChange() {
+  const checked = getChecked();
+  const bar = document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent = checked.length + ' dipilih';
+  bar.style.display = checked.length > 0 ? 'flex' : 'none';
+  const all = document.querySelectorAll('.paket-check');
+  const ca = document.getElementById('checkAll');
+  ca.indeterminate = checked.length > 0 && checked.length < all.length;
+  ca.checked = all.length > 0 && checked.length === all.length;
+}
+
+function getChecked() {
+  return Array.from(document.querySelectorAll('.paket-check:checked'));
+}
+
+function clearAllChecks() {
+  document.querySelectorAll('.paket-check').forEach(function(c) { c.checked = false; });
+  const ca = document.getElementById('checkAll');
+  ca.checked = false; ca.indeterminate = false;
+  onCheckChange();
+}
+
+// ─── Buka modal bulk ────────────────────────────────────────
+function openBulkModal() {
+  const checked = getChecked();
+  if (!checked.length) return;
+
+  const resiList = [];
+  const allowedSets = [];
+
+  checked.forEach(function(cb) {
+    const tr = cb.closest('tr');
+    const resiEl = tr.querySelector('.resi-code');
+    resiList.push(resiEl ? resiEl.textContent.trim() : cb.value);
+    const allowed = cb.dataset.allowed ? cb.dataset.allowed.split(',') : [];
+    allowedSets.push(new Set(allowed));
+  });
+
+  // Intersect semua allowed sets
+  let intersection = new Set(allowedSets[0]);
+  for (let i = 1; i < allowedSets.length; i++) {
+    intersection = new Set([...intersection].filter(function(x) { return allowedSets[i].has(x); }));
+  }
+
+  // Isi hidden ids
+  const hiddenDiv = document.getElementById('bulkHiddenIds');
+  hiddenDiv.innerHTML = '';
+  checked.forEach(function(cb) {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'paket_ids'; inp.value = cb.value;
+    hiddenDiv.appendChild(inp);
+  });
+
+  // Isi daftar resi
+  document.getElementById('bulkResiList').textContent = resiList.join('\n');
+
+  // Isi dropdown status
+  const sel = document.getElementById('bulkStatusSelect');
+  sel.innerHTML = '<option value="">-- Pilih Status --</option>';
+  intersection.forEach(function(s) {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = STATUS_LABEL_MAP[s] || s;
+    sel.appendChild(opt);
+  });
+
+  // Tampilkan warning
+  const warn = document.getElementById('bulkWarning');
+  const warnText = document.getElementById('bulkWarningText');
+  const distinctAllowed = new Set(checked.map(function(c) { return c.dataset.allowed; })).size;
+
+  if (intersection.size === 0) {
+    warn.style.display = 'block';
+    warnText.textContent = 'Tidak ada status yang sama-sama diizinkan untuk semua paket ini. Coba pisahkan pilihan.';
+  } else if (distinctAllowed > 1) {
+    warn.style.display = 'block';
+    warnText.textContent = 'Paket punya wewenang berbeda. Hanya status yang berlaku untuk SEMUA ditampilkan.';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  document.getElementById('bulkSubmitBtn').disabled = true;
+  onBulkStatusChange();
+  openModal('modalBulkUpdate');
+  document.getElementById('bulkBar').style.display = 'none';
+}
+
+function onBulkStatusChange() {
+  const val = document.getElementById('bulkStatusSelect').value;
+  document.getElementById('bulkSectionKurir').style.display  = (val === 'out_for_delivery') ? 'block' : 'none';
+  document.getElementById('bulkSectionDriver').style.display = (['in_transit_gateway','on_transit'].indexOf(val) >= 0) ? 'block' : 'none';
+  document.getElementById('bulkSubmitBtn').disabled = !val;
+}
 </script>
 {% endblock %}

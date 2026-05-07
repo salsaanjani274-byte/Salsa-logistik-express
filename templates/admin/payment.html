@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+{% block title %}Pembayaran – {{ cabang.nama_cabang }}{% endblock %}
+{% block topbar_title %}Pembayaran – {{ cabang.nama_cabang if cabang else '' }}{% endblock %}
+
+{% block sidebar_nav %}
+<div class="nav-section">Menu Utama</div>
+<a href="/admin" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/admin/tambah-pengiriman" class="nav-item"><i class="fas fa-box-open"></i> Buat Paket Baru</a>
+<a href="/admin/payment" class="nav-item active"><i class="fas fa-money-bill-wave"></i> Pembayaran</a>
+<a href="/tracking" class="nav-item"><i class="fas fa-search-location"></i> Lacak Paket</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="stats-grid" style="margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-receipt"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.total|float) }}</div>
+      <div class="stat-label">Total Tagihan</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.lunas|float) }}</div>
+      <div class="stat-label">Sudah Lunas</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-info">
+      <div class="stat-val">Rp{{ "{:,.0f}".format(rekap.pending|float) }}</div>
+      <div class="stat-label">Belum Dibayar</div>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-search">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchPay" placeholder="Cari resi, pengirim..." onkeyup="applyFilter()">
+  </div>
+  <div class="filter-tabs">
+    <button class="ftab active" onclick="filterStatus('all',this)">Semua</button>
+    <button class="ftab" onclick="filterStatus('pending',this)">⏳ Pending</button>
+    <button class="ftab" onclick="filterStatus('lunas',this)">✅ Lunas</button>
+  </div>
+</div>
+
+<!--MOBILE -->
+<div class="pay-cards" id="payCards">
+  {% for py in payments %}
+  <div class="pay-card" data-status="{{ py.status }}" data-search="{{ py.no_resi }} {{ py.pengirim_nama }} {{ py.kota_tujuan }}">
+    <div class="pay-card-header">
+      <span class="resi-code" style="font-size:12px;">{{ py.no_resi }}</span>
+      {% if py.status == 'lunas' %}<span class="badge badge-success">✅ Lunas</span>
+      {% elif py.status == 'pending' %}<span class="badge badge-warning">⏳ Pending</span>
+      {% else %}<span class="badge badge-danger">❌ Batal</span>{% endif %}
+    </div>
+    <div class="pay-card-body">
+      <div class="pay-info-row">
+        <span><i class="fas fa-user" style="color:var(--primary);width:16px;margin-right:4px;"></i>{{ py.pengirim_nama }}</span>
+        <span><i class="fas fa-map-marker-alt" style="color:var(--info);width:16px;margin-right:4px;"></i>{{ py.kota_tujuan }}</span>
+      </div>
+      <div class="pay-info-row">
+        <span>
+          <i class="fas fa-money-bill-wave" style="color:var(--success);margin-right:4px;"></i>
+          {% if py.metode in ('transfer','virtual_account') %}Transfer/VA
+          {% elif py.metode == 'qris' %}QRIS
+          {% elif py.metode == 'credit_card' %}Kartu Kredit
+          {% else %}Tunai{% endif %}
+        </span>
+        <span style="font-size:11px;color:var(--text-muted);">{{ py.created_at.strftime('%d/%m/%Y %H:%M') if py.created_at else '-' }}</span>
+      </div>
+      <div class="pay-amount">Rp{{ "{:,.0f}".format(py.jumlah|float) }}</div>
+    </div>
+    <div class="pay-card-footer">
+      <button class="btn btn-sm btn-warning" onclick="openPayModal({{ py.id }},'{{ py.status }}','{{ py.metode }}','{{ py.no_resi }}','{{ py.pengirim_nama }}','{{ py.jumlah }}','{{ py.kota_tujuan }}','{{ py.layanan_kode or '' }}')">
+        <i class="fas fa-edit"></i> Update
+      </button>
+      <button class="btn btn-sm btn-info" onclick="cetakStruk('{{ py.no_resi }}','{{ py.pengirim_nama }}','{{ py.jumlah }}','{{ py.metode }}','{{ py.status }}','{{ py.kota_tujuan }}','{{ py.created_at.strftime("%d/%m/%Y %H:%M") if py.created_at else "" }}','{{ py.layanan_kode or "" }}')">
+        <i class="fas fa-print"></i> Struk
+      </button>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-receipt"></i><p>Belum ada data pembayaran</p>
+  </div>
+  {% endfor %}
+</div>
+
+<!--DESKTOP -->
+<div class="card desktop-only">
+  <div class="card-header">
+    <h5><i class="fas fa-money-bill-wave" style="color:var(--primary);margin-right:8px;"></i>Daftar Pembayaran</h5>
+  </div>
+  <div class="table-wrap">
+    <table id="tabelPay">
+      <thead><tr>
+        <th>No Resi</th><th>Pengirim</th><th>Layanan</th><th>Tujuan</th>
+        <th>Jumlah</th><th>Metode</th><th>Status</th><th>Tanggal</th><th>Aksi</th>
+      </tr></thead>
+      <tbody>
+      {% for py in payments %}
+      <tr class="pay-row" data-status="{{ py.status }}">
+        <td><span class="resi-code" style="font-size:11px;">{{ py.no_resi }}</span></td>
+        <td>{{ py.pengirim_nama }}</td>
+        <td><span class="badge badge-info">{{ py.layanan_kode }}</span></td>
+        <td>{{ py.kota_tujuan }}</td>
+        <td><strong>Rp{{ "{:,.0f}".format(py.jumlah|float) }}</strong></td>
+        <td>
+          <span style="color:var(--success);font-weight:600;">
+            {% if py.metode in ('transfer','virtual_account') %}<i class="fas fa-university"></i> Transfer/VA
+            {% elif py.metode == 'qris' %}<i class="fas fa-qrcode"></i> QRIS
+            {% elif py.metode == 'credit_card' %}<i class="fas fa-credit-card"></i> Kartu Kredit
+            {% else %}<i class="fas fa-money-bill-wave"></i> Tunai{% endif %}
+          </span>
+        </td>
+        <td>
+          {% if py.status=='lunas' %}<span class="badge badge-success">✅ Lunas</span>
+          {% elif py.status=='pending' %}<span class="badge badge-warning">⏳ Pending</span>
+          {% else %}<span class="badge badge-danger">❌ Batal</span>{% endif %}
+        </td>
+        <td style="font-size:12px;">{{ py.created_at.strftime('%d/%m/%Y %H:%M') if py.created_at else '-' }}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-warning btn-sm" onclick="openPayModal({{ py.id }},'{{ py.status }}','{{ py.metode }}','{{ py.no_resi }}','{{ py.pengirim_nama }}','{{ py.jumlah }}','{{ py.kota_tujuan }}','{{ py.layanan_kode or '' }}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-info btn-sm" onclick="cetakStruk('{{ py.no_resi }}','{{ py.pengirim_nama }}','{{ py.jumlah }}','{{ py.metode }}','{{ py.status }}','{{ py.kota_tujuan }}','{{ py.created_at.strftime("%d/%m/%Y %H:%M") if py.created_at else "" }}','{{ py.layanan_kode or "" }}')">
+              <i class="fas fa-print"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" style="text-align:center;color:#6B7280;padding:40px;">
+        <i class="fas fa-receipt" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>Belum ada data
+      </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!--UPDATE PEMBAYARAN -->
+<div class="modal-overlay" id="modalPay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-cash-register" style="color:var(--primary);margin-right:8px;"></i>Proses Pembayaran</h4>
+      <button class="modal-close" onclick="closeModal('modalPay')">✕</button>
+    </div>
+
+    <div class="pay-info-box">
+      <div class="pay-info-resi" id="modalResi">-</div>
+      <div class="pay-info-detail">
+        <span id="modalPengirim">-</span><span>→</span><span id="modalTujuan">-</span>
+      </div>
+    </div>
+
+    <div class="pay-total-box">
+      <span style="font-weight:600;">Total Tagihan</span>
+      <strong id="modalJumlah" style="font-size:22px;color:var(--success);font-family:'Space Grotesk',sans-serif;">Rp0</strong>
+    </div>
+
+    <form method="POST" id="formPay" action="">
+      <div class="form-group">
+        <label class="form-label">Metode Pembayaran</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+          <!-- Tunai -->
+          <div class="metode-option selected" id="opt_tunai" onclick="pilihMetode('tunai')"
+            style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(16,185,129,0.06);
+                   border:2px solid rgba(16,185,129,0.5);border-radius:12px;cursor:pointer;transition:all .2s;">
+            <i class="fas fa-money-bill-wave" style="color:#10B981;font-size:22px;"></i>
+            <div><div style="font-weight:700;font-size:13px;color:#065F46;">Tunai</div>
+                 <div style="font-size:10px;color:#6B7280;">Cash langsung</div></div>
+          </div>
+          <!-- Xendit / Non-tunai -->
+          <div class="metode-option" id="opt_xendit" onclick="pilihMetode('xendit')"
+            style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#F5F3FF;
+                   border:2px solid rgba(99,102,241,0.3);border-radius:12px;cursor:pointer;transition:all .2s;">
+            <i class="fas fa-credit-card" style="color:#6366F1;font-size:22px;"></i>
+            <div><div style="font-weight:700;font-size:13px;color:#4338CA;">Non-Tunai</div>
+                 <div style="font-size:10px;color:#6B7280;">QRIS, Transfer, VA, E-Wallet</div></div>
+          </div>
+        </div>
+        <input type="hidden" name="metode" id="hiddenMetode" value="tunai">
+      </div>
+
+      <!-- Panel Tunai -->
+      <div id="panel_tunai" class="metode-panel">
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label">Uang Diterima (Rp)</label>
+          <input type="number" class="form-control" id="uangDiterima" placeholder="Masukkan nominal..." oninput="hitungKembalian()" style="font-size:18px;font-weight:700;">
+        </div>
+        <div id="kembalianBox" class="kembalian-box" style="display:none;">
+          <span>Kembalian:</span>
+          <strong id="kembalianVal" style="color:var(--success);font-size:18px;">Rp0</strong>
+        </div>
+      </div>
+
+      <!-- Panel Xendit / Non-Tunai -->
+      <div id="panel_xendit" class="metode-panel" style="display:none;">
+        <div style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:14px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-shield-alt" style="color:#6366F1;font-size:20px;"></i>
+            <div style="font-weight:700;color:#4338CA;font-size:14px;">Pembayaran via Xendit</div>
+          </div>
+          <div style="font-size:12px;color:#6B7280;line-height:1.6;">
+            Link pembayaran akan dikirim / ditampilkan ke pelanggan.<br>
+            Mendukung: <strong>QRIS, BCA, BNI, BRI, Mandiri, OVO, DANA, GoPay, ShopeePay, Kartu Kredit</strong>
+          </div>
+          <div id="xenditLinkWrap" style="display:none;margin-top:12px;">
+            <div style="font-size:12px;color:#6B7280;margin-bottom:6px;">Link Pembayaran Aktif:</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="xenditLinkInput" readonly class="form-control" style="font-size:12px;flex:1;">
+              <button type="button" onclick="copyXenditLink()" class="btn btn-primary" style="white-space:nowrap;padding:8px 12px;">
+                <i class="fas fa-copy"></i>
+              </button>
+              <a id="xenditLinkOpen" href="#" target="_blank" class="btn btn-info" style="white-space:nowrap;padding:8px 12px;">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </div>
+          </div>
+          <button type="button" id="btnBuatInvoice" onclick="buatInvoiceXendit()"
+            style="margin-top:12px;width:100%;padding:10px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">
+            <i class="fas fa-link"></i> Buat / Perbarui Link Pembayaran
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Status Pembayaran</label>
+        <select class="form-control" name="status" id="payStatus" style="font-size:15px;">
+          <option value="pending">⏳ Pending</option>
+          <option value="lunas">✅ Lunas</option>
+          <option value="batal">❌ Batal</option>
+        </select>
+      </div>
+
+      <div class="pay-action-grid">
+        <button type="submit" class="btn btn-success" onclick="document.getElementById('payStatus').value='lunas'">
+          <i class="fas fa-check"></i> Konfirmasi Lunas
+        </button>
+        <button type="button" class="btn btn-info" onclick="simpanDanCetak()">
+          <i class="fas fa-print"></i> Lunas + Struk
+        </button>
+      </div>
+      <button type="submit" class="btn btn-outline" style="width:100%;margin-top:10px;justify-content:center;" onclick="document.getElementById('payStatus').value='pending'">
+        <i class="fas fa-clock"></i> Simpan Pending
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+let currentPayId = null;
+
+function pilihMetode(m) {
+  document.getElementById('panel_tunai').style.display  = m === 'tunai'   ? 'block' : 'none';
+  document.getElementById('panel_xendit').style.display = m === 'xendit'  ? 'block' : 'none';
+  document.getElementById('hiddenMetode').value = m === 'xendit' ? 'transfer' : m;
+  ['tunai','xendit'].forEach(k => {
+    const el = document.getElementById('opt_'+k);
+    if (k === m) {
+      el.style.borderColor = k==='tunai' ? 'rgba(16,185,129,0.8)' : 'rgba(99,102,241,0.8)';
+      el.style.background  = k==='tunai' ? 'rgba(16,185,129,0.12)' : '#EEF2FF';
+    } else {
+      el.style.borderColor = k==='tunai' ? 'rgba(16,185,129,0.25)' : 'rgba(99,102,241,0.2)';
+      el.style.background  = k==='tunai' ? 'rgba(16,185,129,0.04)' : '#F5F3FF';
+    }
+  });
+}
+
+async function buatInvoiceXendit() {
+  if (!currentPayId) return;
+  const btn = document.getElementById('btnBuatInvoice');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membuat Invoice...';
+  try {
+    const r = await fetch(`/api/xendit/create-invoice/${currentPayId}`, {method:'POST'});
+    const d = await r.json();
+    if (d.invoice_url) {
+      document.getElementById('xenditLinkInput').value = d.invoice_url;
+      document.getElementById('xenditLinkOpen').href = d.invoice_url;
+      document.getElementById('xenditLinkWrap').style.display = 'block';
+      btn.innerHTML = '<i class="fas fa-check"></i> Invoice Berhasil Dibuat';
+      btn.style.background = '#10B981';
+    } else {
+      alert('Gagal: ' + (d.error || 'Unknown error'));
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Buat / Perbarui Link Pembayaran';
+    }
+  } catch(e) {
+    alert('Gagal membuat invoice: ' + e.message);
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Buat / Perbarui Link Pembayaran';
+  }
+}
+
+function copyXenditLink() {
+  const val = document.getElementById('xenditLinkInput').value;
+  navigator.clipboard.writeText(val).then(() => alert('Link disalin!'));
+}
+</script>
+
+<!-- MODAL STRUK -->
+<div class="modal-overlay" id="modalStruk">
+  <div class="modal-box" style="max-width:400px;padding:0;overflow:hidden;">
+    <div class="struk-header">
+      <div style="font-size:32px;margin-bottom:6px;"><i class="fas fa-truck-fast"></i></div>
+      <div class="struk-brand">LogisTik Express</div>
+      <div class="struk-subtitle">BUKTI PEMBAYARAN</div>
+    </div>
+    <div class="struk-body" id="strukContent">
+      <div class="struk-row"><span>No. Resi</span><strong id="sResi">-</strong></div>
+      <div class="struk-row"><span>Pengirim</span><span id="sPengirim">-</span></div>
+      <div class="struk-row"><span>Tujuan</span><span id="sTujuan">-</span></div>
+      <div class="struk-row"><span>Layanan</span><span id="sLayanan">-</span></div>
+      <div class="struk-divider"></div>
+      <div class="struk-row"><span>Metode</span><strong id="sMetode">-</strong></div>
+      <div class="struk-row"><span>Status</span><span id="sStatus">-</span></div>
+      <div class="struk-divider"></div>
+      <div class="struk-row struk-total"><span>TOTAL</span><strong id="sTotal">-</strong></div>
+      <div class="struk-divider"></div>
+      <div class="struk-row"><span>Tanggal</span><span id="sTanggal">-</span></div>
+      <div class="struk-row"><span>Kasir</span><span>Admin Cabang</span></div>
+      <div style="text-align:center;padding:16px 0 4px;font-size:12px;color:#888;font-style:italic;">
+        ★ Terima kasih telah menggunakan LogisTik ★
+      </div>
+    </div>
+    <div class="struk-footer-btns">
+      <button class="btn btn-primary" onclick="printStruk()" style="flex:1;justify-content:center;">
+        <i class="fas fa-print"></i> Cetak
+      </button>
+      <button class="btn btn-outline" onclick="closeModal('modalStruk')" style="flex:1;justify-content:center;">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.filter-bar{background:white;border-radius:14px;padding:14px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+.filter-search{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:8px 14px;flex:1;min-width:180px;border:1.5px solid var(--border);}
+.filter-search i{color:var(--text-muted);}
+.filter-search input{border:none;background:transparent;outline:none;font-size:13.5px;width:100%;font-family:'Plus Jakarta Sans',sans-serif;}
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.ftab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:white;cursor:pointer;font-size:12.5px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-muted);transition:all .2s;}
+.ftab.active{background:var(--primary);color:white;border-color:var(--primary);}
+.pay-cards{display:none;flex-direction:column;gap:12px;}
+.pay-card{background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;}
+.pay-card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.pay-card-body{padding:12px 16px;}
+.pay-info-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:var(--text-muted);}
+.pay-amount{font-size:20px;font-weight:800;color:var(--text);font-family:'Space Grotesk',sans-serif;margin-top:8px;}
+.pay-card-footer{display:flex;gap:10px;padding:10px 16px;background:var(--bg);border-top:1px solid var(--border);}
+.pay-card-footer .btn{flex:1;justify-content:center;}
+@media(max-width:768px){.desktop-only{display:none!important;}.pay-cards{display:flex;}}
+.pay-info-box{background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:12px;padding:16px;margin-bottom:18px;color:white;}
+.pay-info-resi{font-family:'Space Grotesk',monospace;font-size:18px;font-weight:700;letter-spacing:1px;}
+.pay-info-detail{font-size:13px;opacity:.85;margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.pay-total-box{background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;}
+.metode-panel{margin-bottom:14px;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.kembalian-box{margin-top:8px;background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
+.pay-action-grid{display:flex;gap:10px;margin-top:4px;}
+.pay-action-grid .btn{flex:1;justify-content:center;}
+/* STRUK */
+.struk-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;text-align:center;padding:22px 20px 18px;}
+.struk-brand{font-size:22px;font-weight:800;font-family:'Space Grotesk',sans-serif;}
+.struk-subtitle{font-size:10px;letter-spacing:3px;opacity:.8;text-transform:uppercase;margin-top:4px;}
+.struk-body{padding:18px 22px;background:#FAFAFA;font-family:'Courier New',monospace;}
+.struk-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;}
+.struk-row span:first-child{color:#666;}
+.struk-total{font-size:15px;padding:10px 0;font-weight:700;}
+.struk-divider{border-top:1px dashed #ccc;margin:8px 0;}
+.struk-footer-btns{display:flex;gap:10px;padding:16px 20px;background:white;border-top:1px solid var(--border);}
+.empty-state{text-align:center;padding:40px;background:white;border-radius:14px;border:1px solid var(--border);color:var(--text-muted);}
+.empty-state i{font-size:40px;opacity:.3;display:block;margin-bottom:12px;}
+@media print{
+  body>*{visibility:hidden;}
+  #modalStruk,#modalStruk *{visibility:visible;}
+  #modalStruk{position:fixed;top:0;left:0;width:100%;height:auto;background:white!important;}
+  .modal-overlay{background:none!important;position:fixed!important;}
+  .struk-footer-btns{display:none!important;}
+  .modal-close{display:none!important;}
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentJumlah = 0;
+let currentNoResi = '';
+let currentPengirim = '';
+let currentTujuan = '';
+let currentMetode = 'tunai';
+let currentLayanan = '';
+let pendingPrintData = null;
+
+function openPayModal(id, status, metode, noresi, pengirim, jumlah, tujuan, layanan) {
+  currentJumlah   = parseFloat(jumlah) || 0;
+  currentNoResi   = noresi;
+  currentPengirim = pengirim;
+  currentTujuan   = tujuan;
+  currentLayanan  = layanan;
+  currentPayId    = id;
+
+  document.getElementById('formPay').action = '/admin/payment/update/' + id;
+  document.getElementById('payStatus').value = status;
+  document.getElementById('modalResi').textContent     = noresi;
+  document.getElementById('modalPengirim').textContent = pengirim;
+  document.getElementById('modalTujuan').textContent   = tujuan;
+  document.getElementById('modalJumlah').textContent   = 'Rp' + Number(jumlah).toLocaleString('id-ID');
+
+  // Reset panels
+  pilihMetode('tunai');
+  const ud = document.getElementById('uangDiterima');
+  if (ud) ud.value = '';
+  const kb = document.getElementById('kembalianBox');
+  if (kb) kb.style.display = 'none';
+  // Reset xendit panel
+  document.getElementById('xenditLinkWrap').style.display = 'none';
+  const btn = document.getElementById('btnBuatInvoice');
+  if (btn) { btn.disabled=false; btn.style.background='#6366F1'; btn.innerHTML='<i class="fas fa-link"></i> Buat / Perbarui Link Pembayaran'; }
+
+  openModal('modalPay');
+}
+
+function updateMetode(metode) {
+  currentMetode = 'tunai';
+  document.getElementById('payStatus').value = 'lunas';
+  const ud = document.getElementById('uangDiterima');
+  if (ud) ud.value = '';
+  const kb = document.getElementById('kembalianBox');
+  if (kb) kb.style.display = 'none';
+}
+
+function hitungKembalian() {
+  const diterima   = parseFloat(document.getElementById('uangDiterima').value) || 0;
+  const kembalian  = diterima - currentJumlah;
+  const box        = document.getElementById('kembalianBox');
+  const val        = document.getElementById('kembalianVal');
+  if (diterima > 0) {
+    box.style.display = 'flex';
+    val.textContent   = 'Rp' + Math.max(0, kembalian).toLocaleString('id-ID');
+    val.style.color   = kembalian >= 0 ? 'var(--success)' : 'var(--danger)';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function simpanDanCetak() {
+  document.getElementById('payStatus').value = 'lunas';
+  const now = new Date().toLocaleString('id-ID');
+  cetakStruk(currentNoResi, currentPengirim, currentJumlah, currentMetode, 'lunas', currentTujuan, now, currentLayanan);
+  setTimeout(() => { document.getElementById('formPay').submit(); }, 600);
+}
+
+function cetakStruk(noresi, pengirim, jumlah, metode, status, tujuan, tanggal, layanan) {
+  document.getElementById('sResi').textContent     = noresi;
+  document.getElementById('sPengirim').textContent = pengirim;
+  document.getElementById('sTujuan').textContent   = tujuan;
+  document.getElementById('sLayanan').textContent  = layanan || '-';
+  document.getElementById('sMetode').textContent   = (metode || '').toUpperCase();
+  document.getElementById('sStatus').textContent   = status === 'lunas' ? '✅ LUNAS' : status === 'pending' ? '⏳ PENDING' : '❌ BATAL';
+  document.getElementById('sTotal').textContent    = 'Rp' + Number(jumlah).toLocaleString('id-ID');
+  document.getElementById('sTanggal').textContent  = tanggal || '-';
+  openModal('modalStruk');
+}
+
+function printStruk() { window.print(); }
+
+let activeStatus = 'all';
+function filterStatus(status, btn) {
+  activeStatus = status;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+function applyFilter() {
+  const q = (document.getElementById('searchPay').value || '').toLowerCase();
+  document.querySelectorAll('.pay-card').forEach(card => {
+    const ms = activeStatus === 'all' || card.dataset.status === activeStatus;
+    const mq = !q || (card.dataset.search || '').toLowerCase().includes(q);
+    card.style.display = ms && mq ? '' : 'none';
+  });
+  document.querySelectorAll('.pay-row').forEach(row => {
+    const ms = activeStatus === 'all' || row.dataset.status === activeStatus;
+    const mq = !q || row.textContent.toLowerCase().includes(q);
+    row.style.display = ms && mq ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

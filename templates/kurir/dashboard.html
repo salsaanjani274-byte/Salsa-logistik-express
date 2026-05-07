@@ -14,8 +14,7 @@
   <p>Kelola pengantaran paket Anda hari ini</p>
 </div>
 
-<!-- STATS -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
   <div class="stat-card">
     <div class="stat-icon yellow"><i class="fas fa-route"></i></div>
     <div class="stat-info">
@@ -31,6 +30,13 @@
     </div>
   </div>
   <div class="stat-card">
+    <div class="stat-icon" style="background:#FEE2E2;"><i class="fas fa-times-circle" style="color:#DC2626;"></i></div>
+    <div class="stat-info">
+      <div class="stat-val" style="color:#DC2626;">{{ failed }}</div>
+      <div class="stat-label">Gagal Antar</div>
+    </div>
+  </div>
+  <div class="stat-card">
     <div class="stat-icon blue"><i class="fas fa-box"></i></div>
     <div class="stat-info">
       <div class="stat-val">{{ pakets|length }}</div>
@@ -39,7 +45,13 @@
   </div>
 </div>
 
-<!-- DAFTAR PAKET KURIR -->
+{% if total_terlambat > 0 %}
+<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;">
+  <i class="fas fa-exclamation-triangle" style="color:#D97706;"></i>
+  <strong>{{ total_terlambat }} paket</strong> melewati estimasi pengiriman. Segera selesaikan!
+</div>
+{% endif %}
+
 <div class="card">
   <div class="card-header">
     <h5><i class="fas fa-motorcycle" style="color:var(--primary);margin-right:8px;"></i>Paket yang Ditugaskan</h5>
@@ -47,12 +59,24 @@
   <div class="table-wrap">
     <table>
       <thead><tr>
+        <th style="width:36px;text-align:center;">
+          <input type="checkbox" id="checkAll" title="Pilih semua" onchange="toggleCheckAll(this)">
+        </th>
         <th>No Resi</th><th>Penerima</th><th>Alamat</th>
         <th>Layanan</th><th>Status</th><th>Aksi</th>
       </tr></thead>
       <tbody>
       {% for p in pakets %}
       <tr>
+        <td style="text-align:center;vertical-align:middle;">
+          {% if p.status == 'out_for_delivery' %}
+          <input type="checkbox" class="paket-check" value="{{ p.id }}"
+            data-tipe="pod_gagal" data-resi="{{ p.no_resi }}" onchange="onCheckChange()">
+          {% elif p.status == 'failed_delivery' %}
+          <input type="checkbox" class="paket-check" value="{{ p.id }}"
+            data-tipe="reschedule" data-resi="{{ p.no_resi }}" onchange="onCheckChange()">
+          {% endif %}
+        </td>
         <td><span class="resi-code">{{ p.no_resi }}</span></td>
         <td>
           <div style="font-weight:600;">{{ p.nama_penerima }}</div>
@@ -63,22 +87,61 @@
         <td>
           {% set s = STATUS_LABEL.get(p.status, (p.status, 'secondary')) %}
           <span class="badge badge-{{ s[1] }}">{{ s[0] }}</span>
+          {% set info = cek_keterlambatan(p) %}
+          {% if info.terlambat %}
+          <br><small style="color:#DC2626;font-size:10px;"><i class="fas fa-clock"></i> {{ info.label }}</small>
+          {% endif %}
         </td>
         <td>
           {% if p.status == 'out_for_delivery' %}
-          <button class="btn btn-success btn-sm" onclick="openPOD('{{ p.id }}', '{{ p.no_resi }}', '{{ p.nama_penerima }}')">
-            <i class="fas fa-check"></i> POD
-          </button>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn btn-success btn-sm"
+              onclick="openPOD('{{ p.id }}', '{{ p.no_resi }}', '{{ p.nama_penerima }}')">
+              <i class="fas fa-check"></i> POD
+            </button>
+            <button class="btn btn-danger btn-sm"
+              onclick="openGagal('{{ p.id }}', '{{ p.no_resi }}')">
+              <i class="fas fa-times"></i> Gagal
+            </button>
+          </div>
+          {% elif p.status == 'failed_delivery' %}
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn btn-warning btn-sm"
+              onclick="openReschedule('{{ p.id }}', '{{ p.no_resi }}')">
+              <i class="fas fa-redo"></i> Jadwal Ulang
+            </button>
+            <button class="btn btn-secondary btn-sm"
+              onclick="openRetur('{{ p.id }}', '{{ p.no_resi }}')">
+              <i class="fas fa-undo"></i> Retur
+            </button>
+          </div>
+          {% elif p.status == 'on_hold' %}
+          <div style="font-size:12px;">
+            <span style="color:#D97706;font-weight:600;">
+              <i class="fas fa-lock"></i> Masa Hold
+            </span>
+            {% if p.hold_until %}
+            <div style="color:#6B7280;margin-top:2px;">
+              Berakhir: {{ p.hold_until.strftime('%d %b %Y') if p.hold_until else '-' }}
+            </div>
+            {% endif %}
+          </div>
           {% elif p.status == 'delivered' %}
-          <span style="color:var(--success);font-size:12px;font-weight:600;"><i class="fas fa-check-circle"></i> Selesai</span>
+          <span style="color:var(--success);font-size:12px;font-weight:600;">
+            <i class="fas fa-check-circle"></i> Selesai
+          </span>
+          {% elif p.status == 'return_process' %}
+          <span style="color:#6B7280;font-size:12px;">
+            <i class="fas fa-undo"></i> Dalam Retur
+          </span>
           {% else %}
           <span style="color:#9CA3AF;font-size:12px;">Menunggu</span>
           {% endif %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" style="text-align:center;padding:50px;color:#6B7280;">
-        <i class="fas fa-inbox" style="font-size:42px;opacity:.3;display:block;margin-bottom:12px;"></i>
+      <tr><td colspan="8" style="text-align:center;padding:50px;color:#6B7280;">
+        <i class="fas fa-box-open" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>
         Belum ada paket yang ditugaskan
       </td></tr>
       {% endfor %}
@@ -87,24 +150,34 @@
   </div>
 </div>
 
-<!-- PANDUAN ALUR -->
 <div class="card" style="margin-top:20px;">
-  <div class="card-header"><h5><i class="fas fa-map-signs" style="color:var(--primary);margin-right:8px;"></i>Alur Status Pengiriman</h5></div>
+  <div class="card-header"><h5><i class="fas fa-map-signs" style="color:var(--primary);margin-right:8px;"></i>Alur Status & Panduan Kurir</h5></div>
   <div class="card-body">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      {% for key, (label, color) in STATUS_LABEL.items() %}
-      <span class="badge badge-{{ color }}" style="padding:6px 12px;font-size:12px;">{{ label }}</span>
-      {% endfor %}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+      <span class="badge badge-primary" style="padding:6px 12px;">Sedang Diantar</span>
+      <span style="color:#9CA3AF;align-self:center;">→</span>
+      <span class="badge badge-success" style="padding:6px 12px;">✅ Terkirim (POD)</span>
+      <span style="color:#9CA3AF;align-self:center;">atau</span>
+      <span class="badge badge-danger" style="padding:6px 12px;">❌ Gagal Antar</span>
+      <span style="color:#9CA3AF;align-self:center;">→</span>
+      <span class="badge badge-warning" style="padding:6px 12px;">🔁 Jadwal Ulang</span>
+      <span style="color:#9CA3AF;align-self:center;font-size:11px;">(maks 2x)</span>
+      <span style="color:#9CA3AF;align-self:center;">→ (3x gagal) →</span>
+      <span class="badge" style="padding:6px 12px;background:#D97706;color:#fff;">🔒 Hold 3 Hari</span>
+      <span style="color:#9CA3AF;align-self:center;">→</span>
+      <span class="badge badge-secondary" style="padding:6px 12px;">↩ Retur</span>
     </div>
-    <div style="margin-top:16px;padding:14px;background:#F9FAFB;border-radius:10px;font-size:13px;color:#374151;">
-      <strong>📋 Petunjuk POD (Proof of Delivery):</strong><br>
-      Saat paket sudah diserahkan ke penerima, klik tombol <strong style="color:var(--success);">POD</strong> dan isi nama penerima. 
-      Status paket akan otomatis berubah menjadi <em>Terkirim</em> dan notifikasi dikirim ke pengirim.
+    <div style="padding:14px;background:#F9FAFB;border-radius:10px;font-size:13px;color:#374151;">
+      <strong>📋 Petunjuk:</strong><br>
+      • <b>POD</b>: Paket berhasil diterima → isi nama penerima aktual<br>
+      • <b>Gagal Antar</b>: Penerima tidak ada / tidak bisa dihubungi → isi alasan<br>
+      • <b>Jadwal Ulang</b>: Paket gagal (1–2x) → coba antar lagi besok<br>
+      • <b>Hold (Penahanan)</b>: Setelah 3x gagal, paket <b>ditahan 3 hari</b> sebelum dapat diretur. Retur tidak langsung terjadi pada hari yang sama.<br>
+      • <b>Retur</b>: Paket tidak bisa diantar → kembalikan ke cabang asal (setelah masa hold berakhir)
     </div>
   </div>
 </div>
 
-<!-- MODAL POD -->
 <div class="modal-overlay" id="modalPOD">
   <div class="modal-box">
     <div class="modal-header">
@@ -117,18 +190,252 @@
       <div style="font-size:12px;color:#065F46;margin-top:8px;">Nama Penerima Terdaftar</div>
       <div style="font-weight:600;" id="podNamaTerdaftar">-</div>
     </div>
-    <form method="POST" id="formPOD" action="">
+    <form method="POST" id="formPOD" action="" enctype="multipart/form-data">
       <div class="form-group">
         <label class="form-label">Nama Penerima Aktual <span style="color:var(--danger);">*</span></label>
         <input class="form-control" name="nama_penerima" required placeholder="Nama orang yang menerima paket">
         <div style="font-size:11px;color:#6B7280;margin-top:5px;">Bisa berbeda jika diterima oleh keluarga/tetangga</div>
       </div>
-      <button class="btn btn-success" type="submit" style="width:100%;padding:13px;font-size:15px;">
+
+      <!-- FOTO POD -->
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label"><i class="fas fa-camera" style="color:var(--primary);margin-right:6px;"></i>Foto Bukti Penerimaan <span style="color:#6B7280;font-size:11px;">(Opsional)</span></label>
+        <div id="fotoDropArea" onclick="document.getElementById('inputFotoPOD').click()"
+          style="border:2px dashed rgba(99,102,241,0.4);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:#F5F3FF;transition:all .2s;">
+          <div id="fotoPreviewWrap" style="display:none;margin-bottom:10px;">
+            <img id="fotoPreview" src="" alt="Preview" style="max-width:100%;max-height:180px;border-radius:8px;object-fit:cover;">
+          </div>
+          <div id="fotoPlaceholder">
+            <i class="fas fa-camera" style="font-size:28px;color:#8B5CF6;"></i>
+            <div style="font-size:13px;color:#6B7280;margin-top:8px;">Tap untuk ambil/pilih foto</div>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">JPG, PNG, WEBP — maks 10MB</div>
+          </div>
+        </div>
+        <input type="file" id="inputFotoPOD" name="foto_pod" accept="image/*" capture="environment"
+          style="display:none;" onchange="previewFotoPOD(this)">
+        <button type="button" id="btnHapusFoto" onclick="hapusFoto()" style="display:none;margin-top:8px;font-size:12px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;padding:4px 12px;cursor:pointer;">
+          <i class="fas fa-trash"></i> Hapus Foto
+        </button>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Catatan (opsional)</label>
+        <input class="form-control" name="catatan_pod" placeholder="Contoh: Diterima di pos satpam, kondisi baik">
+      </div>
+
+      <button class="btn btn-success" type="submit" style="width:100%;padding:13px;font-size:15px;margin-top:6px;">
         <i class="fas fa-check-double"></i> Konfirmasi Paket Terkirim
       </button>
     </form>
   </div>
 </div>
+
+<script>
+function previewFotoPOD(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('fotoPreview').src = e.target.result;
+      document.getElementById('fotoPreviewWrap').style.display = 'block';
+      document.getElementById('fotoPlaceholder').style.display = 'none';
+      document.getElementById('btnHapusFoto').style.display = 'inline-block';
+      document.getElementById('fotoDropArea').style.borderColor = 'var(--success)';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function hapusFoto() {
+  document.getElementById('inputFotoPOD').value = '';
+  document.getElementById('fotoPreview').src = '';
+  document.getElementById('fotoPreviewWrap').style.display = 'none';
+  document.getElementById('fotoPlaceholder').style.display = 'block';
+  document.getElementById('btnHapusFoto').style.display = 'none';
+  document.getElementById('fotoDropArea').style.borderColor = 'rgba(99,102,241,0.4)';
+}
+</script>
+
+<div class="modal-overlay" id="modalGagal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-times-circle" style="color:var(--danger);margin-right:8px;"></i>Laporan Gagal Antar</h4>
+      <button class="modal-close" onclick="closeModal('modalGagal')">✕</button>
+    </div>
+    <div style="background:#FEF2F2;border:1px solid rgba(220,38,38,0.3);border-radius:10px;padding:12px;margin-bottom:18px;">
+      <div style="font-size:12px;color:#991B1B;">No Resi</div>
+      <div class="resi-code" style="font-size:15px;" id="gagalResiDisplay">-</div>
+    </div>
+    <form method="POST" id="formGagal" action="">
+      <div class="form-group">
+        <label class="form-label">Alasan Gagal Antar <span style="color:var(--danger);">*</span></label>
+        <select class="form-control" name="alasan" required>
+          <option value="">-- Pilih Alasan --</option>
+          <option value="Penerima tidak ada di tempat">Penerima tidak ada di tempat</option>
+          <option value="Nomor HP tidak aktif/tidak diangkat">Nomor HP tidak aktif/tidak diangkat</option>
+          <option value="Alamat tidak ditemukan">Alamat tidak ditemukan</option>
+          <option value="Paket ditolak penerima">Paket ditolak penerima</option>
+          <option value="Akses lokasi tidak bisa dijangkau">Akses lokasi tidak bisa dijangkau</option>
+        </select>
+      </div>
+
+      <div style="background:#FFF9F0;border-radius:8px;padding:12px;font-size:12px;color:#92400E;margin-bottom:16px;">
+        <i class="fas fa-info-circle"></i> Setelah laporan gagal, Anda bisa menjadwalkan ulang atau memproses retur dari dashboard.
+      </div>
+      <button class="btn btn-danger" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-times"></i> Laporkan Gagal Antar
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReschedule">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-redo" style="color:var(--warning);margin-right:8px;"></i>Jadwal Ulang Pengiriman</h4>
+      <button class="modal-close" onclick="closeModal('modalReschedule')">✕</button>
+    </div>
+    <div style="background:#FFF9F0;border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px;margin-bottom:18px;">
+      <div style="font-size:12px;color:#92400E;">No Resi</div>
+      <div class="resi-code" style="font-size:15px;" id="reschedResiDisplay">-</div>
+    </div>
+    <form method="POST" id="formReschedule" action="">
+      <div class="form-group">
+        <label class="form-label">Catatan Penjadwalan Ulang</label>
+        <input class="form-control" name="catatan" placeholder="Contoh: Coba antar besok pagi" value="Dijadwalkan ulang">
+      </div>
+      <button class="btn btn-warning" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-redo"></i> Jadwalkan Ulang Pengiriman
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRetur">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4><i class="fas fa-undo" style="color:#6B7280;margin-right:8px;"></i>Proses Retur ke Cabang</h4>
+      <button class="modal-close" onclick="closeModal('modalRetur')">✕</button>
+    </div>
+    <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:12px;margin-bottom:18px;">
+      <div style="font-size:12px;color:#6B7280;">No Resi</div>
+      <div class="resi-code" style="font-size:15px;" id="returResiDisplay">-</div>
+    </div>
+    <div style="background:#FEF3C7;border-radius:8px;padding:12px;font-size:12px;color:#92400E;margin-bottom:16px;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>Perhatian:</strong> Paket akan dikembalikan ke cabang asal. Pastikan Anda membawa paket ini ke cabang untuk diproses lebih lanjut.
+    </div>
+    <form method="POST" id="formRetur" action="">
+      <button class="btn btn-secondary" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-undo"></i> Konfirmasi Proses Retur
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ══ BULK ACTION BAR ══════════════════════════════════════ -->
+<div id="bulkBar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#1E293B;color:#fff;border-radius:16px;padding:14px 22px;
+  box-shadow:0 8px 32px rgba(0,0,0,.35);z-index:999;
+  align-items:center;gap:12px;min-width:360px;max-width:92vw;flex-wrap:wrap;">
+  <span id="bulkCount" style="font-weight:700;font-size:15px;white-space:nowrap;">0 dipilih</span>
+  <span style="color:#475569;">|</span>
+  <button id="btnBulkPOD" class="btn btn-success btn-sm" style="display:none;" onclick="openBulkPOD()">
+    <i class="fas fa-check-double"></i> POD Sekaligus
+  </button>
+  <button id="btnBulkGagal" class="btn btn-danger btn-sm" style="display:none;" onclick="openBulkGagal()">
+    <i class="fas fa-times"></i> Gagal Sekaligus
+  </button>
+  <button id="btnBulkResched" class="btn btn-warning btn-sm" style="display:none;" onclick="openBulkResched()">
+    <i class="fas fa-redo"></i> Jadwal Ulang Sekaligus
+  </button>
+  <button class="btn btn-sm" style="background:#334155;color:#CBD5E1;" onclick="clearAllChecks()">
+    <i class="fas fa-times"></i> Batal
+  </button>
+</div>
+
+<!-- ══ MODAL BULK POD ══════════════════════════════════════ -->
+<div class="modal-overlay" id="modalBulkPOD" onclick="if(event.target===this) closeBulkModal('modalBulkPOD')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h4><i class="fas fa-check-double" style="color:var(--success);margin-right:8px;"></i>Bulk POD – Konfirmasi Terkirim</h4>
+      <button class="modal-close" onclick="closeBulkModal('modalBulkPOD')">✕</button>
+    </div>
+    <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#166534;margin-bottom:6px;">Paket yang akan dikonfirmasi:</div>
+      <div id="bulkPODResiList" style="font-family:monospace;font-size:11px;color:#166534;max-height:80px;overflow-y:auto;white-space:pre;line-height:1.8;"></div>
+    </div>
+    <form method="POST" id="formBulkPOD" action="/kurir/bulk-pod">
+      <div id="bulkPODIds"></div>
+      <div class="form-group">
+        <label class="form-label">Nama Penerima Aktual <span style="color:var(--danger);">*</span></label>
+        <input class="form-control" name="nama_penerima" required placeholder="Nama orang yang menerima paket">
+        <small style="color:#6B7280;">Digunakan untuk semua paket yang dipilih. Kosongkan untuk pakai nama penerima terdaftar masing-masing.</small>
+      </div>
+      <button class="btn btn-success" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-check-double"></i> Konfirmasi Semua Terkirim
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ══ MODAL BULK GAGAL ══════════════════════════════════════ -->
+<div class="modal-overlay" id="modalBulkGagal" onclick="if(event.target===this) closeBulkModal('modalBulkGagal')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h4><i class="fas fa-times-circle" style="color:var(--danger);margin-right:8px;"></i>Bulk Gagal Antar</h4>
+      <button class="modal-close" onclick="closeBulkModal('modalBulkGagal')">✕</button>
+    </div>
+    <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#991B1B;margin-bottom:6px;">Paket yang dilaporkan gagal:</div>
+      <div id="bulkGagalResiList" style="font-family:monospace;font-size:11px;color:#991B1B;max-height:80px;overflow-y:auto;white-space:pre;line-height:1.8;"></div>
+    </div>
+    <form method="POST" id="formBulkGagal" action="/kurir/bulk-gagal">
+      <div id="bulkGagalIds"></div>
+      <div class="form-group">
+        <label class="form-label">Alasan Gagal Antar <span style="color:var(--danger);">*</span></label>
+        <select class="form-control" name="alasan" required>
+          <option value="">-- Pilih Alasan --</option>
+          <option value="Penerima tidak ada di tempat">Penerima tidak ada di tempat</option>
+          <option value="Nomor HP tidak aktif/tidak diangkat">Nomor HP tidak aktif/tidak diangkat</option>
+          <option value="Alamat tidak ditemukan">Alamat tidak ditemukan</option>
+          <option value="Paket ditolak penerima">Paket ditolak penerima</option>
+          <option value="Akses lokasi tidak bisa dijangkau">Akses lokasi tidak bisa dijangkau</option>
+        </select>
+        <small style="color:#6B7280;">Alasan ini berlaku untuk semua paket yang dipilih.</small>
+      </div>
+      <div style="background:#FFF9F0;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:14px;">
+        <i class="fas fa-info-circle"></i> Paket yang sudah 3x gagal akan otomatis masuk masa Hold.
+      </div>
+      <button class="btn btn-danger" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-times"></i> Laporkan Gagal Semua
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ══ MODAL BULK RESCHEDULE ══════════════════════════════════ -->
+<div class="modal-overlay" id="modalBulkResched" onclick="if(event.target===this) closeBulkModal('modalBulkResched')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h4><i class="fas fa-redo" style="color:var(--warning);margin-right:8px;"></i>Bulk Jadwal Ulang</h4>
+      <button class="modal-close" onclick="closeBulkModal('modalBulkResched')">✕</button>
+    </div>
+    <div style="background:#FFF9F0;border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#92400E;margin-bottom:6px;">Paket yang akan dijadwalkan ulang:</div>
+      <div id="bulkReschedResiList" style="font-family:monospace;font-size:11px;color:#92400E;max-height:80px;overflow-y:auto;white-space:pre;line-height:1.8;"></div>
+    </div>
+    <form method="POST" id="formBulkResched" action="/kurir/bulk-reschedule">
+      <div id="bulkReschedIds"></div>
+      <div class="form-group">
+        <label class="form-label">Catatan Penjadwalan Ulang</label>
+        <input class="form-control" name="catatan" placeholder="Contoh: Coba antar besok pagi" value="Dijadwalkan ulang">
+      </div>
+      <button class="btn btn-warning" type="submit" style="width:100%;padding:13px;">
+        <i class="fas fa-redo"></i> Jadwalkan Ulang Semua
+      </button>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -138,6 +445,96 @@ function openPOD(id, resi, nama) {
   document.getElementById('podNamaTerdaftar').textContent = nama;
   document.getElementById('formPOD').action = '/kurir/pod/' + id;
   openModal('modalPOD');
+}
+function openGagal(id, resi) {
+  document.getElementById('gagalResiDisplay').textContent = resi;
+  document.getElementById('formGagal').action = '/kurir/gagal/' + id;
+  openModal('modalGagal');
+}
+function openReschedule(id, resi) {
+  document.getElementById('reschedResiDisplay').textContent = resi;
+  document.getElementById('formReschedule').action = '/kurir/reschedule/' + id;
+  openModal('modalReschedule');
+}
+function openRetur(id, resi) {
+  document.getElementById('returResiDisplay').textContent = resi;
+  document.getElementById('formRetur').action = '/kurir/retur/' + id;
+  openModal('modalRetur');
+}
+
+// ─── Bulk Logic ─────────────────────────────────────────────
+function toggleCheckAll(cb) {
+  document.querySelectorAll('.paket-check').forEach(function(c){ c.checked = cb.checked; });
+  onCheckChange();
+}
+function getChecked() { return Array.from(document.querySelectorAll('.paket-check:checked')); }
+
+function onCheckChange() {
+  const checked = getChecked();
+  const bar = document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent = checked.length + ' dipilih';
+  bar.style.display = checked.length > 0 ? 'flex' : 'none';
+  const all = document.querySelectorAll('.paket-check');
+  const ca  = document.getElementById('checkAll');
+  ca.indeterminate = checked.length > 0 && checked.length < all.length;
+  ca.checked = all.length > 0 && checked.length === all.length;
+
+  const podGagal = checked.filter(function(c){ return c.dataset.tipe === 'pod_gagal'; }).length;
+  const resched  = checked.filter(function(c){ return c.dataset.tipe === 'reschedule'; }).length;
+  document.getElementById('btnBulkPOD').style.display    = podGagal > 0 ? 'inline-flex' : 'none';
+  document.getElementById('btnBulkGagal').style.display  = podGagal > 0 ? 'inline-flex' : 'none';
+  document.getElementById('btnBulkResched').style.display = resched  > 0 ? 'inline-flex' : 'none';
+}
+
+function clearAllChecks() {
+  document.querySelectorAll('.paket-check').forEach(function(c){ c.checked = false; });
+  const ca = document.getElementById('checkAll');
+  ca.checked = false; ca.indeterminate = false;
+  onCheckChange();
+}
+
+function fillIds(containerIdMap) {
+  // containerIdMap: { containerId: filterTipe }
+  Object.entries(containerIdMap).forEach(function(entry) {
+    const containerId = entry[0], tipe = entry[1];
+    const div = document.getElementById(containerId);
+    div.innerHTML = '';
+    getChecked().filter(function(c){ return !tipe || c.dataset.tipe === tipe; }).forEach(function(cb) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'paket_ids'; inp.value = cb.value;
+      div.appendChild(inp);
+    });
+  });
+}
+
+function openBulkPOD() {
+  const items = getChecked().filter(function(c){ return c.dataset.tipe === 'pod_gagal'; });
+  document.getElementById('bulkPODResiList').textContent = items.map(function(c){ return c.dataset.resi; }).join('\n');
+  fillIds({'bulkPODIds': 'pod_gagal'});
+  openModal('modalBulkPOD');
+  document.getElementById('bulkBar').style.display = 'none';
+}
+function openBulkGagal() {
+  const items = getChecked().filter(function(c){ return c.dataset.tipe === 'pod_gagal'; });
+  document.getElementById('bulkGagalResiList').textContent = items.map(function(c){ return c.dataset.resi; }).join('\n');
+  fillIds({'bulkGagalIds': 'pod_gagal'});
+  openModal('modalBulkGagal');
+  document.getElementById('bulkBar').style.display = 'none';
+}
+function openBulkResched() {
+  const items = getChecked().filter(function(c){ return c.dataset.tipe === 'reschedule'; });
+  document.getElementById('bulkReschedResiList').textContent = items.map(function(c){ return c.dataset.resi; }).join('\n');
+  fillIds({'bulkReschedIds': 'reschedule'});
+  openModal('modalBulkResched');
+  document.getElementById('bulkBar').style.display = 'none';
+}
+
+function closeBulkModal(modalId) {
+  closeModal(modalId);
+  const checked = document.querySelectorAll('.paket-check:checked');
+  if (checked.length > 0) {
+    document.getElementById('bulkBar').style.display = 'flex';
+  }
 }
 </script>
 {% endblock %}
